@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login • CIET Hall Booking</title>
+  <link rel="icon" href="/static/images/college_logo.png" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <!-- AOS + SweetAlert2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Pre-paint theme -->
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', saved ? saved === 'dark' : prefersDark);
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+    .blob { filter: blur(60px); opacity:.28 }
+    @keyframes float { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-20px) rotate(5deg)} }
+    @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
+  </style>
+</head>
+
+<body class="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
+  <!-- Animated background -->
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-indigo-500/40 dark:bg-indigo-500/35 blob" style="animation: float 18s ease-in-out infinite;"></div>
+    <div class="absolute -bottom-32 -right-32 w-[600px] h-[600px] rounded-full bg-fuchsia-500/30 dark:bg-fuchsia-500/25 blob" style="animation: float 22s ease-in-out infinite 2s;"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-sky-500/25 dark:bg-sky-500/20 blob" style="animation: float 20s ease-in-out infinite 1s;"></div>
+  </div>
+
+  <!-- Header with theme toggle -->
+  <header class="max-w-lg mx-auto px-6 py-8 flex items-center justify-between" data-aos="fade-down">
+    <a href="index.html" class="flex items-center gap-3">
+      <img src="/static/images/college_logo.png" alt="CIET" class="w-11 h-11" />
+      <div class="leading-tight">
+        <p class="font-semibold text-slate-800 dark:text-slate-200">CIET</p>
+        <p class="text-xs text-slate-600 dark:text-slate-400">Hall Booking</p>
+      </div>
+    </a>
+    <button id="themeToggle" aria-label="Toggle theme"
+            class="px-3 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition">
+      <span id="themeIcon">🌙</span>
+    </button>
+  </header>
+
+  <!-- Login Card -->
+  <main class="grid place-items-center px-4 py-4">
+    <section class="w-full max-w-md p-8 rounded-3xl border border-slate-300/60 dark:border-white/10 bg-white/80 dark:bg-white/5 backdrop-blur-xl shadow-2xl"
+             data-aos="zoom-in" data-aos-duration="700">
+      <div class="text-center mb-6">
+        <h1 class="text-2xl font-bold">Login</h1>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">CIET Hall Booking System</p>
+      </div>
+
+      <form id="loginForm" class="space-y-5">
+        <div>
+          <label class="block text-sm font-medium mb-2">Username</label>
+          <input id="username" type="text" class="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500/30 outline-none transition" placeholder="Enter username" required />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2">Password</label>
+          <div class="relative">
+            <input id="password" type="password" class="w-full px-4 py-3 pr-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-500/30 outline-none transition" placeholder="••••••••" required />
+            <button type="button" class="togglePwd absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition">
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full px-4 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-500 active:scale-[.98] transition shadow-lg">
+          <span id="submitText">Sign In</span>
+        </button>
+      </form>
+
+      <!-- Divider -->
+      <div class="mt-6 flex items-center gap-3">
+        <div class="flex-1 h-px bg-slate-200 dark:bg-white/10"></div>
+        <span class="text-xs text-slate-500 dark:text-slate-400">OR</span>
+        <div class="flex-1 h-px bg-slate-200 dark:bg-white/10"></div>
+      </div>
+
+      <!-- Links -->
+      <div class="mt-6 space-y-3">
+        <button id="forgotBtn" type="button" class="w-full px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm font-medium">
+          🔐 Forgot Password?
+        </button>
+        
+        <div class="text-center">
+          <p class="text-sm text-slate-600 dark:text-slate-300">Don't have an account?</p>
+          <a href="signup.html" class="inline-block mt-2 px-4 py-2 rounded-lg border border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition font-semibold">
+            Create Account
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-6 text-center">
+        <p class="text-xs text-slate-500 dark:text-slate-400">Contact admin for password reset</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-lg mx-auto px-6 py-8 text-center text-sm text-slate-600 dark:text-slate-400">
+    <p>© CIET • Smart Hall Booking</p>
+    <p class="mt-1">Developed by <span class="font-semibold text-slate-800 dark:text-slate-200">DEVA VEERA KUMARAN</span></p>
+  </footer>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
+
+  <script>
+    const apiBase = 'http://127.0.0.1:5000';
+
+    // AOS
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ once: true, duration: 700, easing: 'ease-out-cubic', offset: 50 });
+    }
+
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    
+    function setIcon() {
+      const isDark = document.documentElement.classList.contains('dark');
+      themeIcon.textContent = isDark ? '🌙' : '☀️';
+    }
+    
+    function applyTheme(mode) {
+      const html = document.documentElement;
+      if (mode === 'dark') {
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else if (mode === 'light') {
+        html.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        localStorage.removeItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.classList.toggle('dark', prefersDark);
+      }
+      setIcon();
+    }
+    
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      applyTheme(isDark ? 'light' : 'dark');
+    });
+    
+    setIcon();
+
+    // Password Toggle
+    document.querySelectorAll('.togglePwd').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const input = btn.parentElement.querySelector('input');
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        btn.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
+      });
+    });
+
+    // Forgot Password
+    document.getElementById('forgotBtn').addEventListener('click', () => {
+      Swal.fire({
+        icon: 'info',
+        title: 'Password Reset',
+        html: `
+          <p>To reset your password, please contact:</p>
+          <p style="margin-top: 10px; font-weight: bold;">📞 Your Department Admin</p>
+          <p style="margin-top: 5px; font-weight: bold;">📞 Principal's Office</p>
+          <p style="margin-top: 15px; color: #666; font-size: 12px;">They can reset your password in the system.</p>
+        `,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#4f46e5'
+      });
+    });
+
+    // Login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      
+      if (!username || !password) {
+        return Swal.fire({ icon: 'warning', title: 'Missing Fields', text: 'Enter username and password' });
+      }
+
+      document.getElementById('submitText').textContent = 'Logging in...';
+      document.getElementById('loginForm').querySelector('button').disabled = true;
+
+      try {
+        const res = await fetch(`${apiBase}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          document.getElementById('submitText').textContent = 'Sign In';
+          document.getElementById('loginForm').querySelector('button').disabled = false;
+          return Swal.fire({ icon: 'error', title: 'Login Failed', text: data.message || 'Invalid credentials' });
+        }
+
+        // Store in localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('username', data.username);
+        localStorage.setItem('email', data.email);
+        localStorage.setItem('department', data.department);
+        localStorage.setItem('full_name', data.full_name);
+
+        console.log('✅ Login successful');
+        console.log('Role:', data.role);
+
+        // Auto-redirect based on role
+        setTimeout(() => {
+          if (data.role === 'principal') {
+            location.href = 'principal.html';
+          } else {
+            location.href = 'staff.html';
+          }
+        }, 800);
+
+      } catch (err) {
+        console.error('❌ Error:', err);
+        document.getElementById('submitText').textContent = 'Sign In';
+        document.getElementById('loginForm').querySelector('button').disabled = false;
+        Swal.fire({ icon: 'error', title: 'Network Error', text: 'Check your connection and try again' });
+      }
+    });
+  </script>
+</body>
+</html>

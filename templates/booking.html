@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Book Halls • CIET Hall Booking</title>
+  <link rel="icon" href="/static/images/college_logo.png" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <!-- AOS + SweetAlert2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Pre-paint theme -->
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', saved ? saved === 'dark' : prefersDark);
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+    .blob { filter: blur(48px); opacity:.26 }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .btn-loading {
+      position: relative;
+      color: transparent;
+    }
+
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .swal2-actions {
+      display: flex !important;
+      gap: 10px !important;
+      justify-content: center !important;
+      margin-top: 20px !important;
+      position: relative !important;
+      z-index: 1000 !important;
+    }
+
+    .swal2-confirm, .swal2-cancel {
+      padding: 10px 20px !important;
+      font-size: 14px !important;
+      border-radius: 6px !important;
+      display: inline-block !important;
+      cursor: pointer !important;
+      border: none !important;
+      font-weight: 500 !important;
+      min-width: 100px !important;
+    }
+
+    .swal2-confirm {
+      background-color: #4f46e5 !important;
+      color: white !important;
+    }
+
+    .swal2-confirm:hover {
+      background-color: #4338ca !important;
+    }
+
+    .swal2-cancel {
+      background-color: #e5e7eb !important;
+      color: #374151 !important;
+    }
+
+    .swal2-cancel:hover {
+      background-color: #d1d5db !important;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
+  <!-- Background -->
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/40 dark:bg-indigo-500/35 blob" style="animation: float 12s ease-in-out infinite;"></div>
+    <div class="absolute -bottom-24 -right-16 w-[28rem] h-[28rem] rounded-full bg-fuchsia-500/30 dark:bg-fuchsia-500/25 blob" style="animation: float 14s ease-in-out infinite;"></div>
+    <div class="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-sky-500/25 dark:bg-sky-500/20 blob" style="animation: float 16s ease-in-out infinite;"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between" data-aos="fade-down">
+    <a href="index.html" class="flex items-center gap-3">
+      <img src="/static/images/college_logo.png" alt="CIET" class="w-10 h-10" />
+      <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">CIET • Hall Booking</span>
+    </a>
+    <div class="flex items-center gap-3">
+      <a href="availability.html" class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition">
+        Availability
+      </a>
+      <a href="staff.html" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition">
+        Dashboard
+      </a>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <div class="text-center mb-10" data-aos="fade-up">
+      <h1 class="text-3xl font-bold">Book a Hall</h1>
+      <p class="text-slate-600 dark:text-slate-300 mt-2">Select a hall and submit your booking request</p>
+    </div>
+
+    <!-- Hall Cards with Images -->
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- Auditorium -->
+      <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition"
+           data-aos="zoom-in" data-aos-delay="0">
+        <img src="/static/images/auditorium.png" alt="Auditorium" class="w-full h-48 object-cover" />
+        <div class="p-6">
+          <h2 class="text-xl font-bold">Auditorium</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Large events, ceremonies, and cultural programs</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: 500</p>
+          <button data-hall="Auditorium" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[.98] transition">
+            Book Now
+          </button>
+        </div>
+      </div>
+
+      <!-- Seminar Hall -->
+      <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition"
+           data-aos="zoom-in" data-aos-delay="100">
+        <img src="/static/images/seminar.png" alt="Seminar Hall" class="w-full h-48 object-cover" />
+        <div class="p-6">
+          <h2 class="text-xl font-bold">Seminar Hall</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Workshops, talks, seminars, and presentations</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: 250</p>
+          <button data-hall="Seminar Hall" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-fuchsia-600 text-white hover:bg-fuchsia-500 active:scale-[.98] transition">
+            Book Now
+          </button>
+        </div>
+      </div>
+
+      <!-- Board Room -->
+      <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition"
+           data-aos="zoom-in" data-aos-delay="200">
+        <img src="/static/images/board.png" alt="Board Room" class="w-full h-48 object-cover" />
+        <div class="p-6">
+          <h2 class="text-xl font-bold">Board Room</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Meetings, reviews, and administrative sessions</p>
+          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: 60</p>
+          <button data-hall="Board Room" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-500 active:scale-[.98] transition">
+            Book Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-white/10 mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-slate-600 dark:text-slate-400">© CIET • Smart Hall Booking</p>
+      <p class="text-slate-700 dark:text-slate-300">Developed by <span class="font-semibold">DEVA VEERA KUMARAN</span></p>
+    </div>
+  </footer>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
+
+  <script>
+    const apiBase = 'http://127.0.0.1:5000';
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    const userDepartment = localStorage.getItem('department');
+    const userFullName = localStorage.getItem('full_name');
+    
+    // Auth check
+    if (!token) {
+      location.href = 'login.html';
+    }
+    
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ once: true, duration: 700, easing: 'ease-out-cubic', offset: 50 });
+    }
+
+    const DEPARTMENTS = ['CSE', 'ECE', 'AIDS', 'MCT', 'CIVIL', 'MECH', 'IT', 'CYBER SECURITY', 'VLSI', 'EEE', 'AIML', 'S&H', 'Placement'];
+
+    document.querySelectorAll('.book-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        openBookingForm(btn.dataset.hall);
+      });
+    });
+
+    async function openBookingForm(hall) {
+      const deptOptions = DEPARTMENTS.map(d => {
+        const selected = d === userDepartment ? 'selected' : '';
+        return `<option value="${d}" ${selected}>${d}</option>`;
+      }).join('');
+      
+      const { value: formValues, isConfirmed } = await Swal.fire({
+        title: `Book ${hall}`,
+        html: `
+          <div style="text-align: left; font-size: 13px;">
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">Department *</label>
+              <select id="swal-dept" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box;">
+                <option value="">Select Department</option>
+                ${deptOptions}
+              </select>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">HOD Name *</label>
+              <input id="swal-hod" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box;" placeholder="Enter HOD name" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 4px;">Date *</label>
+                <input id="swal-date" type="date" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box;" />
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 4px;">Time *</label>
+                <select id="swal-time" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box;">
+                  <option value="">Select</option>
+                  <option value="FN">9AM-1PM (FN)</option>
+                  <option value="AN">2PM-6PM (AN)</option>
+                  <option value="Full">9AM-6PM (Full Day)</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">Seats *</label>
+              <input id="swal-seats" type="number" min="1" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box;" placeholder="50" />
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">Purpose *</label>
+              <input id="swal-purpose" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; box-sizing: border-box;" placeholder="Reason" />
+            </div>
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">Details (Optional)</label>
+              <textarea id="swal-details" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; height: 60px; box-sizing: border-box;" placeholder="Requirements"></textarea>
+            </div>
+          </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        confirmButtonColor: '#4f46e5',
+        cancelButtonText: 'Cancel',
+        width: '450px',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        preConfirm: () => {
+          const dept = document.getElementById('swal-dept').value;
+          const hod = document.getElementById('swal-hod').value.trim();
+          const date = document.getElementById('swal-date').value;
+          const time = document.getElementById('swal-time').value;
+          const seats = parseInt(document.getElementById('swal-seats').value || '0', 10);
+          const purpose = document.getElementById('swal-purpose').value.trim();
+          const details = document.getElementById('swal-details').value.trim();
+
+          if (!dept || !hod || !date || !time || seats <= 0 || !purpose) {
+            Swal.showValidationMessage('Fill all required fields');
+            return false;
+          }
+
+          return { hall, dept, hod, date, time, seats, purpose, details };
+        }
+      });
+
+      if (!isConfirmed || !formValues) return;
+      await submitBooking(formValues);
+    }
+
+    async function submitBooking(formValues) {
+      try {
+        const confirmBtn = Swal.getConfirmButton();
+        const originalText = confirmBtn.textContent;
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add('btn-loading');
+        confirmBtn.textContent = '';
+
+        // Check conflicts
+        const conflictRes = await fetch(
+          `${apiBase}/bookings?hall=${formValues.hall}&date=${formValues.date}&time=${formValues.time}`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        const conflictData = await conflictRes.json();
+
+        if (conflictData.items?.length > 0) {
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove('btn-loading');
+          confirmBtn.textContent = originalText;
+          Swal.close();
+          return Swal.fire({
+            icon: 'error',
+            title: 'Already Booked',
+            text: 'This time slot is already taken.'
+          });
+        }
+
+        // Submit booking
+        const res = await fetch(`${apiBase}/book`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(formValues)
+        });
+
+        const bookingData = await res.json();
+
+        if (!res.ok) {
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove('btn-loading');
+          confirmBtn.textContent = originalText;
+          Swal.close();
+          return Swal.fire({ 
+            icon: 'error', 
+            title: 'Failed', 
+            text: 'Booking failed' 
+          });
+        }
+
+        // Success
+        Swal.close();
+        await Swal.fire({
+          icon: 'success',
+          title: 'Booking Allocated! ✅',
+          html: `
+            <p>Your ${formValues.hall} booking has been submitted to the principal successfully.</p>
+            <p style="margin-top: 10px; color: #f59e0b; font-weight: bold;">⏳ Pending Principal approval</p>
+          `,
+          confirmButtonText: 'Go to Dashboard',
+          confirmButtonColor: '#4f46e5'
+        });
+
+        location.href = 'staff.html';
+
+      } catch (error) {
+        Swal.close();
+        Swal.fire({ 
+          icon: 'error', 
+          title: 'Error', 
+          text: error.message 
+        });
+      }
+    }
+  </script>
+</body>
+</html>

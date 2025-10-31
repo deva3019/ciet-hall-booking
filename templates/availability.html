@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hall Availability • CIET Hall Booking</title>
+  <link rel="icon" href="/static/images/college_logo.png" />
+
+  <!-- Tailwind CDN with dark mode -->
+  <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <!-- AOS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
+
+  <!-- Pre-paint theme -->
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', saved ? saved === 'dark' : prefersDark);
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+    .blob { filter: blur(48px); opacity:.26 }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
+    
+    .calendar-container {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      background: #e5e7eb;
+      padding: 2px;
+      border-radius: 8px;
+    }
+    
+    .dark .calendar-container {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      min-height: 28px;
+    }
+    
+    .calendar-day:hover:not(.empty) {
+      transform: scale(1.05);
+    }
+    
+    .calendar-day.available {
+      background: #10b981;
+      color: white;
+    }
+    
+    .calendar-day.pending {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .calendar-day.booked {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .calendar-day.empty {
+      background: #f3f4f6;
+      color: #d1d5db;
+      cursor: default;
+    }
+    
+    .dark .calendar-day.empty {
+      background: rgba(255, 255, 255, 0.05);
+      color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .calendar-day.today {
+      border: 2px solid #000;
+      font-weight: 700;
+    }
+    
+    .dark .calendar-day.today {
+      border-color: #fff;
+    }
+    
+    .month-header {
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+    
+    .dark .month-header {
+      color: #e5e7eb;
+    }
+    
+    .weekday-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+      margin-bottom: 4px;
+    }
+    
+    .weekday {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+    }
+    
+    .dark .weekday {
+      color: #9ca3af;
+    }
+
+    .hall-tab.active {
+      background-color: #c7d2fe;
+      color: #3730a3;
+      border-color: #4c1d95;
+    }
+
+    .dark .hall-tab.active {
+      background-color: rgba(79, 70, 229, 0.3);
+      color: #a5b4fc;
+      border-color: rgba(79, 70, 229, 0.5);
+    }
+
+    .hall-tab:not(.active) {
+      background-color: #f3f4f6;
+      color: #374151;
+      border-color: #d1d5db;
+    }
+
+    .dark .hall-tab:not(.active) {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #d1d5db;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .filter-btn.active {
+      background-color: #c7d2fe;
+      color: #3730a3;
+      border-color: #4c1d95;
+    }
+
+    .dark .filter-btn.active {
+      background-color: rgba(79, 70, 229, 0.3);
+      color: #a5b4fc;
+      border-color: rgba(79, 70, 229, 0.5);
+    }
+
+    .filter-btn:not(.active) {
+      background-color: #f3f4f6;
+      color: #374151;
+      border-color: #d1d5db;
+    }
+
+    .dark .filter-btn:not(.active) {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #d1d5db;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900 dark:bg-gradient-to-br dark:from-slate-950 dark:to-slate-900 dark:text-white">
+  <!-- Background -->
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-indigo-500/20 dark:bg-indigo-500/10 blob" style="animation: float 12s ease-in-out infinite;"></div>
+    <div class="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-purple-500/20 dark:bg-purple-500/10 blob" style="animation: float 14s ease-in-out infinite 2s;"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="border-b border-slate-200/50 dark:border-white/5 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="booking.html" class="flex items-center gap-2">
+        <img src="/static/images/college_logo.png" alt="CIET" class="w-9 h-9" />
+        <div>
+          <p class="text-sm font-bold text-slate-800 dark:text-slate-100">CIET</p>
+          <p class="text-xs text-slate-600 dark:text-slate-400">Hall Availability</p>
+        </div>
+      </a>
+      <div class="flex items-center gap-2">
+        <a href="booking.html" class="px-3 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition">
+          📅 Book Hall
+        </a>
+        <a href="staff.html" class="px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 transition">
+          Dashboard
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <!-- Header Section -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold">Hall Availability Calendar</h1>
+      <p class="text-slate-600 dark:text-slate-400">Select a hall to view 60-day availability</p>
+    </div>
+
+    <!-- Hall Selector Tabs -->
+    <div class="flex gap-3 mb-8 flex-wrap">
+      <button class="hall-tab active px-4 py-2 rounded-lg font-medium text-sm transition-all border" data-hall="Auditorium">
+        🏛️ Auditorium (500)
+      </button>
+      <button class="hall-tab px-4 py-2 rounded-lg font-medium text-sm transition-all border" data-hall="Seminar Hall">
+        🎤 Seminar Hall (250)
+      </button>
+      <button class="hall-tab px-4 py-2 rounded-lg font-medium text-sm transition-all border" data-hall="Board Room">
+        📊 Board Room (60)
+      </button>
+    </div>
+
+    <!-- Legend & Info Bar -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-200/50 dark:border-white/5 mb-8">
+      <div class="flex gap-4 flex-wrap text-sm">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded bg-emerald-500"></div>
+          <span>Available</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded bg-amber-500"></div>
+          <span>Pending</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded bg-red-500"></div>
+          <span>Booked</span>
+        </div>
+      </div>
+      <div class="text-sm text-slate-600 dark:text-slate-400">
+        📌 Bold border = Today
+      </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="p-4 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-200/50 dark:border-white/5 mb-8">
+      <div class="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+        <div class="flex flex-col md:flex-row gap-3 md:items-center flex-1">
+          <label class="text-sm font-medium whitespace-nowrap">Filter by Time Slot:</label>
+          <div class="flex gap-2 flex-wrap">
+            <button id="filterAll" class="filter-btn active px-3 py-1 rounded text-xs font-medium border transition" data-filter="all">
+              All (FN + AN + Full)
+            </button>
+            <button id="filterFN" class="filter-btn px-3 py-1 rounded text-xs font-medium border transition" data-filter="fn">
+              Forenoon (9AM-1PM)
+            </button>
+            <button id="filterAN" class="filter-btn px-3 py-1 rounded text-xs font-medium border transition" data-filter="an">
+              Afternoon (2PM-6PM)
+            </button>
+            <button id="filterFull" class="filter-btn px-3 py-1 rounded text-xs font-medium border transition" data-filter="full">
+              Full Day (9AM-6PM)
+            </button>
+          </div>
+        </div>
+        <button id="downloadIcsBtn" class="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition text-sm font-medium whitespace-nowrap">
+          📥 Download .ics
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-12 text-slate-600 dark:text-slate-400">
+      Loading calendar...
+    </div>
+
+    <!-- Calendar Grid -->
+    <div id="calendarGrid" class="hidden grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Month 1 -->
+      <div class="p-5 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-200/50 dark:border-white/5">
+        <div class="month-header" id="month1-header"></div>
+        <div class="weekday-header">
+          <div class="weekday">Su</div>
+          <div class="weekday">Mo</div>
+          <div class="weekday">Tu</div>
+          <div class="weekday">We</div>
+          <div class="weekday">Th</div>
+          <div class="weekday">Fr</div>
+          <div class="weekday">Sa</div>
+        </div>
+        <div class="calendar-container" id="month1-calendar"></div>
+      </div>
+
+      <!-- Month 2 -->
+      <div class="p-5 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-200/50 dark:border-white/5">
+        <div class="month-header" id="month2-header"></div>
+        <div class="weekday-header">
+          <div class="weekday">Su</div>
+          <div class="weekday">Mo</div>
+          <div class="weekday">Tu</div>
+          <div class="weekday">We</div>
+          <div class="weekday">Th</div>
+          <div class="weekday">Fr</div>
+          <div class="weekday">Sa</div>
+        </div>
+        <div class="calendar-container" id="month2-calendar"></div>
+      </div>
+
+      <!-- Month 3 -->
+      <div class="p-5 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-200/50 dark:border-white/5">
+        <div class="month-header" id="month3-header"></div>
+        <div class="weekday-header">
+          <div class="weekday">Su</div>
+          <div class="weekday">Mo</div>
+          <div class="weekday">Tu</div>
+          <div class="weekday">We</div>
+          <div class="weekday">Th</div>
+          <div class="weekday">Fr</div>
+          <div class="weekday">Sa</div>
+        </div>
+        <div class="calendar-container" id="month3-calendar"></div>
+      </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="mt-8 p-5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30">
+      <p class="text-sm text-slate-700 dark:text-slate-300">
+        <strong>💡 Tip:</strong> Green dates have available slots, amber dates have pending requests, and red dates are fully booked.
+      </p>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200/50 dark:border-white/5 mt-16 bg-white/50 dark:bg-slate-900/50">
+    <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-600 dark:text-slate-400">
+      <p>© CIET • Smart Hall Booking</p>
+      <p>Developed by <span class="font-semibold text-slate-800 dark:text-slate-200">DEVA VEERA KUMARAN</span></p>
+    </div>
+  </footer>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
+
+  <script>
+    const apiBase = 'http://127.0.0.1:5000';
+    const token = localStorage.getItem('token');
+
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ once: true, duration: 700, easing: 'ease-out', offset: 60 });
+    }
+
+    let currentHall = 'Auditorium';
+    let currentFilter = 'all';
+    let allBookings = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    function getDayOfWeek(date) {
+      return date.getDay();
+    }
+
+    function getMonthYear(date) {
+      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    function dateToString(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function getStatus(date, hall, filter) {
+      const dateStr = dateToString(date);
+      const bookings = allBookings.filter(b => b.hall === hall && b.date === dateStr);
+
+      if (filter === 'all') {
+        const hasApprovedFN = bookings.some(b => b.time === 'FN' && b.status === 'Approved');
+        const hasApprovedAN = bookings.some(b => b.time === 'AN' && b.status === 'Approved');
+        const hasApprovedFull = bookings.some(b => b.time === 'Full' && b.status === 'Approved');
+
+        if (hasApprovedFN || hasApprovedAN || hasApprovedFull) return 'booked';
+        if (bookings.some(b => b.status === 'Pending')) return 'pending';
+        return 'available';
+      } else if (filter === 'fn') {
+        const booking = bookings.find(b => b.time === 'FN');
+        if (booking?.status === 'Approved') return 'booked';
+        if (booking?.status === 'Pending') return 'pending';
+        return 'available';
+      } else if (filter === 'an') {
+        const booking = bookings.find(b => b.time === 'AN');
+        if (booking?.status === 'Approved') return 'booked';
+        if (booking?.status === 'Pending') return 'pending';
+        return 'available';
+      } else if (filter === 'full') {
+        const booking = bookings.find(b => b.time === 'Full');
+        if (booking?.status === 'Approved') return 'booked';
+        if (booking?.status === 'Pending') return 'pending';
+        return 'available';
+      }
+      
+      return 'available';
+    }
+
+    function renderCalendar(startDate, containerId, headerId) {
+      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+      
+      document.getElementById(headerId).textContent = getMonthYear(monthStart);
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      for (let i = 0; i < getDayOfWeek(monthStart); i++) {
+        const emptyDay = document.createElement('div');
+        emptyDay.className = 'calendar-day empty';
+        container.appendChild(emptyDay);
+      }
+
+      for (let day = 1; day <= monthEnd.getDate(); day++) {
+        const date = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
+        
+        const diffDays = Math.floor((date - today) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0 || diffDays > 60) {
+          const emptyDay = document.createElement('div');
+          emptyDay.className = 'calendar-day empty';
+          container.appendChild(emptyDay);
+          continue;
+        }
+
+        const dayEl = document.createElement('div');
+        const status = getStatus(date, currentHall, currentFilter);
+        dayEl.className = `calendar-day ${status}`;
+        
+        if (date.getTime() === today.getTime()) {
+          dayEl.classList.add('today');
+        }
+
+        dayEl.textContent = day;
+        dayEl.title = `${date.toLocaleDateString()}: ${status.toUpperCase()}`;
+        container.appendChild(dayEl);
+      }
+    }
+
+    function renderAllCalendars() {
+      const month1 = new Date(today.getFullYear(), today.getMonth(), 1);
+      const month2 = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+      const month3 = new Date(today.getFullYear(), today.getMonth() + 2, 1);
+
+      renderCalendar(month1, 'month1-calendar', 'month1-header');
+      renderCalendar(month2, 'month2-calendar', 'month2-header');
+      renderCalendar(month3, 'month3-calendar', 'month3-header');
+    }
+
+    async function loadBookings() {
+      try {
+        const res = await fetch(`${apiBase}/bookings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        allBookings = data.items || [];
+
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('calendarGrid').classList.remove('hidden');
+
+        renderAllCalendars();
+      } catch (err) {
+        console.error('Error loading bookings:', err);
+        document.getElementById('loadingState').innerHTML = '<div class="text-center py-12 text-red-600">❌ Error loading bookings. Check console.</div>';
+      }
+    }
+
+    // Download .ics
+    document.getElementById('downloadIcsBtn').addEventListener('click', async () => {
+      try {
+        const approvedBookings = allBookings.filter(b => b.hall === currentHall && b.status === 'Approved');
+        
+        if (approvedBookings.length === 0) {
+          alert('No approved bookings for ' + currentHall);
+          return;
+        }
+
+        const res = await fetch(`${apiBase}/bookings/export/ics`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            booking_ids: approvedBookings.map(b => b._id)
+          })
+        });
+
+        if (!res.ok) {
+          alert('Failed to download calendar file');
+          return;
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentHall}_bookings.ics`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+      } catch (error) {
+        console.error('Download error:', error);
+        alert('Error downloading calendar file: ' + error.message);
+      }
+    });
+
+    // Event listeners
+    document.querySelectorAll('.hall-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.hall-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentHall = btn.dataset.hall;
+        renderAllCalendars();
+      });
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderAllCalendars();
+      });
+    });
+
+    loadBookings();
+  </script>
+</body>
+</html>
