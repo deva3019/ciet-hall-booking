@@ -36,9 +36,15 @@
       to { transform: rotate(360deg); }
     }
 
+    @keyframes pulse-dot {
+      0%, 20%, 50%, 80%, 100% { opacity: 1; }
+      40% { opacity: 0.5; }
+      60% { opacity: 0.5; }
+    }
+
     .btn-loading {
       position: relative;
-      color: transparent;
+      pointer-events: none;
     }
 
     .btn-loading::after {
@@ -50,9 +56,9 @@
       left: 50%;
       margin-left: -8px;
       margin-top: -8px;
-      border: 2px solid #ffffff;
+      border: 2px solid rgba(255, 255, 255, 0.3);
       border-radius: 50%;
-      border-top-color: transparent;
+      border-top-color: white;
       animation: spin 0.6s linear infinite;
     }
 
@@ -74,6 +80,7 @@
       border: none !important;
       font-weight: 500 !important;
       min-width: 100px !important;
+      transition: all 0.3s !important;
     }
 
     .swal2-confirm {
@@ -81,8 +88,13 @@
       color: white !important;
     }
 
-    .swal2-confirm:hover {
+    .swal2-confirm:hover:not(:disabled) {
       background-color: #4338ca !important;
+    }
+
+    .swal2-confirm:disabled {
+      opacity: 0.7 !important;
+      cursor: not-allowed !important;
     }
 
     .swal2-cancel {
@@ -356,6 +368,11 @@
         location.href = 'staff.html';
 
       } catch (error) {
+        const confirmBtn = Swal.getConfirmButton();
+        confirmBtn.disabled = false;
+        confirmBtn.classList.remove('btn-loading');
+        confirmBtn.textContent = 'Submit';
+        
         Swal.close();
         Swal.fire({ 
           icon: 'error', 

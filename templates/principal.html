@@ -6,17 +6,14 @@
   <title>Principal Dashboard • CIET Hall Booking</title>
   <link rel="icon" href="/static/images/college_logo.png" />
 
-  <!-- Tailwind CDN -->
   <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
   <script>
     tailwind.config = { darkMode: 'class' }
   </script>
 
-  <!-- AOS + SweetAlert2 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Pre-paint theme -->
   <script>
     (function () {
       try {
@@ -31,11 +28,61 @@
     .blob { filter: blur(48px); opacity:.26 }
     @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
     @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
+
+    /* Fix SweetAlert2 buttons */
+    .swal2-confirm, .swal2-cancel, .swal2-styled:focus {
+      outline: none !important;
+    }
+
+    .swal2-confirm {
+      background-color: #10b981 !important;
+      color: white !important;
+      font-weight: 600 !important;
+      border: none !important;
+      padding: 12px 32px !important;
+      font-size: 16px !important;
+      border-radius: 8px !important;
+    }
+
+    .swal2-confirm:hover {
+      background-color: #059669 !important;
+    }
+
+    .swal2-cancel {
+      background-color: #e5e7eb !important;
+      color: #374151 !important;
+      font-weight: 600 !important;
+      border: none !important;
+      padding: 12px 32px !important;
+      font-size: 16px !important;
+      border-radius: 8px !important;
+      margin-right: 10px !important;
+    }
+
+    .swal2-cancel:hover {
+      background-color: #d1d5db !important;
+    }
+
+    .swal2-html-container {
+      color: #1f2937 !important;
+      font-size: 15px !important;
+      line-height: 1.6 !important;
+    }
+
+    .swal2-popup {
+      background-color: white !important;
+      border-radius: 16px !important;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .swal2-title {
+      color: #1f2937 !important;
+      font-size: 24px !important;
+    }
   </style>
 </head>
 
 <body class="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
-  <!-- Background -->
   <div class="pointer-events-none fixed inset-0 -z-10">
     <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/40 dark:bg-indigo-500/35 blob" style="animation: float 12s ease-in-out infinite;"></div>
     <div class="absolute -bottom-24 -right-16 w-[28rem] h-[28rem] rounded-full bg-fuchsia-500/30 dark:bg-fuchsia-500/25 blob" style="animation: float 14s ease-in-out infinite;"></div>
@@ -169,7 +216,6 @@
     </div>
   </footer>
 
-  <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
 
   <script>
@@ -186,10 +232,8 @@
       AOS.init({ once: true, duration: 700, easing: 'ease-out', offset: 60 });
     }
 
-    // Display principal name
     document.getElementById('principalName').textContent = fullName || 'Principal';
 
-    // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => {
       localStorage.removeItem('token');
       localStorage.removeItem('role');
@@ -200,26 +244,33 @@
       location.href = 'login.html';
     });
 
-    // Status badge
     function statusBadge(status) {
       if (status === 'Approved') return 'px-3 py-1 text-xs rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800';
       if (status === 'Rejected') return 'px-3 py-1 text-xs rounded-full border bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
       return 'px-3 py-1 text-xs rounded-full border bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
     }
 
-    // Format timestamp
     function formatRequestTime(createdAt) {
       try {
+        if (!createdAt) return 'N/A';
+        
         const date = new Date(createdAt);
-        return date.toLocaleString('en-IN', { 
-          year: 'numeric', 
-          month: 'short', 
-          day: '2-digit', 
-          hour: '2-digit', 
+        
+        // Format to IST (UTC+5:30)
+        const options = {
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
           minute: '2-digit',
-          second: '2-digit'
-        });
+          hour12: true
+        };
+        
+        const formatter = new Intl.DateTimeFormat('en-IN', options);
+        return formatter.format(date);
       } catch (e) {
+        console.error('Time error:', e);
         return 'N/A';
       }
     }
@@ -227,7 +278,6 @@
     let allBookings = [];
     let pendingBookings = [];
 
-    // Load all bookings
     async function loadAll() {
       try {
         const res = await fetch(`${apiBase}/bookings`, {
@@ -241,12 +291,11 @@
         renderHistory(allBookings.filter(b => b.status !== 'Pending'));
         updateStats();
       } catch (err) {
-        console.error('Error loading bookings:', err);
-        document.getElementById('pendingList').innerHTML = '<div class="text-center py-12 text-slate-500 dark:text-slate-400">Backend not connected. Connect to view bookings.</div>';
+        console.error('Error:', err);
+        document.getElementById('pendingList').innerHTML = '<div class="text-center py-12 text-slate-500">Backend not connected.</div>';
       }
     }
 
-    // Update stats
     function updateStats() {
       document.getElementById('totalCount').textContent = allBookings.length;
       document.getElementById('pendingCount').textContent = allBookings.filter(b => b.status === 'Pending').length;
@@ -254,7 +303,6 @@
       document.getElementById('rejectedCount').textContent = allBookings.filter(b => b.status === 'Rejected').length;
     }
 
-    // Render pending
     function renderPending(items) {
       const listDiv = document.getElementById('pendingList');
       if (items.length === 0) {
@@ -268,9 +316,9 @@
                 <span class="ml-2 ${statusBadge(b.status)}">${b.status}</span>
               </div>
               <div class="text-right text-sm text-slate-600 dark:text-slate-400">
-                <div><strong>Booking:</strong> ${new Date(b.date).toLocaleDateString()}</div>
+                <div><strong>Booking:</strong> ${new Date(b.date).toLocaleDateString('en-IN')}</div>
                 <div class="font-medium">${b.time === 'FN' ? '9AM-1PM' : b.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</div>
-                <div style="margin-top: 4px; font-size: 11px; color: #999;"><strong>Requested:</strong> ${formatRequestTime(b.createdAt)}</div>
+                <div style="margin-top: 4px; font-size: 11px; color: #888;"><strong>Requested:</strong> ${formatRequestTime(b.createdAt)}</div>
               </div>
             </div>
             <div class="text-sm text-slate-600 dark:text-slate-300 space-y-1 mb-4">
@@ -282,10 +330,10 @@
               ${b.details ? `<p><span class="font-medium">Details:</span> ${b.details}</p>` : ''}
             </div>
             <div class="flex gap-3">
-              <button class="approve-btn flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition">
+              <button class="approve-btn flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition font-medium">
                 ✓ Approve
               </button>
-              <button class="reject-btn flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 transition">
+              <button class="reject-btn flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 transition font-medium">
                 ✗ Reject
               </button>
             </div>
@@ -296,7 +344,6 @@
       }
     }
 
-    // Render history
     function renderHistory(items) {
       const listDiv = document.getElementById('historyList');
       if (items.length === 0) {
@@ -310,7 +357,7 @@
                 <span class="ml-2 ${statusBadge(b.status)}">${b.status}</span>
               </div>
               <div class="text-right text-sm text-slate-600 dark:text-slate-400">
-                <div>${new Date(b.date).toLocaleDateString()}</div>
+                <div>${new Date(b.date).toLocaleDateString('en-IN')}</div>
                 <div class="font-medium">${b.time === 'FN' ? '9AM-1PM' : b.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</div>
               </div>
             </div>
@@ -324,7 +371,6 @@
       }
     }
 
-    // Attach approve/reject handlers
     function attachHandlers() {
       document.querySelectorAll('.approve-btn').forEach(btn => {
         btn.addEventListener('click', () => act(btn, 'approve'));
@@ -334,27 +380,30 @@
       });
     }
 
-    // Approve/Reject action
     async function act(btn, action) {
       const card = btn.closest('[data-id]');
       const id = card.dataset.id;
       const booking = allBookings.find(b => b._id === id);
 
-      const confirm = await Swal.fire({
+      const result = await Swal.fire({
         icon: 'question',
         title: `${action === 'approve' ? 'Approve' : 'Reject'} Request?`,
         html: `
-          <p class="text-sm text-slate-600">Hall: <strong>${booking.hall}</strong></p>
-          <p class="text-sm text-slate-600">Date: <strong>${new Date(booking.date).toLocaleDateString()}</strong> • ${booking.time === 'FN' ? '9AM-1PM' : booking.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</p>
-          <p class="text-sm text-slate-600">Department: <strong>${booking.department}</strong></p>
-          <p class="text-sm text-slate-600">Requested by: <strong>${booking.createdBy}</strong> at ${formatRequestTime(booking.createdAt)}</p>
+          <div style="text-align: left; background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Hall:</strong> ${booking.hall}</p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Date:</strong> ${new Date(booking.date).toLocaleDateString('en-IN')} • ${booking.time === 'FN' ? '9AM-1PM' : booking.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Department:</strong> ${booking.department}</p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Requested by:</strong> ${booking.createdBy} at ${formatRequestTime(booking.createdAt)}</p>
+          </div>
         `,
         showCancelButton: true,
         confirmButtonText: action === 'approve' ? 'Yes, Approve' : 'Yes, Reject',
-        confirmButtonColor: action === 'approve' ? '#10b981' : '#ef4444'
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: action === 'approve' ? '#10b981' : '#ef4444',
+        cancelButtonColor: '#e5e7eb'
       });
 
-      if (!confirm.isConfirmed) return;
+      if (!result.isConfirmed) return;
 
       try {
         const res = await fetch(`${apiBase}/${action}/${id}`, {
@@ -364,25 +413,25 @@
         const data = await res.json();
 
         if (!res.ok) {
-          return Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Try again' });
+          return Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Try again', confirmButtonColor: '#ef4444' });
         }
 
-        Swal.fire({
+        await Swal.fire({
           icon: 'success',
           title: `Request ${action === 'approve' ? 'Approved' : 'Rejected'}!`,
           text: `Notification sent to ${booking.createdBy}`,
           timer: 2000,
-          showConfirmButton: false
+          showConfirmButton: false,
+          confirmButtonColor: '#10b981'
         });
 
         loadAll();
       } catch (err) {
-        console.error('Action error:', err);
-        Swal.fire({ icon: 'error', title: 'Network Error', text: 'Try again later.' });
+        console.error('Error:', err);
+        Swal.fire({ icon: 'error', title: 'Network Error', text: 'Try again later.', confirmButtonColor: '#ef4444' });
       }
     }
 
-    // Filters
     function applyFilters() {
       const hallFilter = document.getElementById('hallFilter').value;
       const deptFilter = document.getElementById('deptFilter').value;

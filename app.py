@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, render_template, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import bcrypt
 import os
 from dotenv import load_dotenv
@@ -9,467 +9,367 @@ from bson.objectid import ObjectId
 from config import Config, get_database, init_db
 from icalendar import Calendar, Event
 from io import BytesIO
-from flask import Flask, render_template, send_from_directory
-
-app = Flask(__name__, static_folder='static', static_url_path='/')
-
-# Add this route to serve index.html as default
-@app.route('/')
-def home():
-    return send_from_directory('static', 'index.html')
 
 load_dotenv()
 
-app = Flask(__name__)
+# ==================== FLASK APP ====================
+app = Flask(__name__, 
+            static_folder='static', 
+            static_url_path='/static',
+            template_folder='templates')
+
 app.config.from_object(Config)
-CORS(app, resources={r"/*": {"origins": Config.CORS_ORIGINS}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 jwt = JWTManager(app)
-init_db()
 
-# ==================== UTILITY FUNCTIONS ====================
+# ==================== IST TIMEZONE ====================
+IST = timezone(timedelta(hours=5, minutes=30))
 
-def hash_password(password):
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+def get_ist_now():
+    """Get current time in IST (India Standard Time)"""
+    return datetime.now(IST)
 
-def verify_password(password, hashed):
-    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+# ==================== DATABASE ====================
+try:
+    init_db()
+    print("✅ MongoDB Atlas connected!")
+except Exception as e:
+    print(f"❌ MongoDB connection error: {e}")
 
-def get_user_by_username(username):
-    db = get_database()
-    return db.users.find_one({'username': username})
+# ==================== STATIC FILE ROUTES ====================
+@app.route('/')
+def index():
+    """Serve homepage"""
+    return send_from_directory('templates', 'index.html')
 
-def get_booking_by_id(booking_id):
-    db = get_database()
-    try:
-        return db.bookings.find_one({'_id': ObjectId(booking_id)})
-    except:
-        return None
+@app.route('/index.html')
+def index_html():
+    return send_from_directory('templates', 'index.html')
 
-def generate_ics_for_booking(booking):
-    cal = Calendar()
-    cal.add('prodid', '-//CIET Hall Booking//ciet.edu.in//')
-    cal.add('version', '2.0')
-    cal.add('calscale', 'GREGORIAN')
-    
-    event = Event()
-    event.add('uid', f"{booking['_id']}@ciet.edu.in")
-    event.add('dtstamp', datetime.utcnow())
-    
-    booking_date = datetime.strptime(booking['date'], '%Y-%m-%d')
-    
-    if booking['time'] == 'FN':
-        start_time = booking_date.replace(hour=9, minute=0)
-        end_time = booking_date.replace(hour=13, minute=0)
-    elif booking['time'] == 'AN':
-        start_time = booking_date.replace(hour=14, minute=0)
-        end_time = booking_date.replace(hour=18, minute=0)
-    else:
-        start_time = booking_date.replace(hour=9, minute=0)
-        end_time = booking_date.replace(hour=18, minute=0)
-    
-    event.add('dtstart', start_time)
-    event.add('dtend', end_time)
-    event.add('summary', f"Hall Booking: {booking['hall']}")
-    event.add('description', f"Department: {booking['department']}\nPurpose: {booking['purpose']}\nSeats: {booking['seats']}")
-    event.add('location', booking['hall'])
-    event.add('status', 'CONFIRMED' if booking['status'] == 'Approved' else 'TENTATIVE')
-    
-    cal.add_component(event)
-    return cal.to_ical()
+@app.route('/login.html')
+def login():
+    return send_from_directory('templates', 'login.html')
 
-# ==================== AUTH ROUTES ====================
-
-@app.route('/signup', methods=['POST'])
+@app.route('/signup.html')
 def signup():
+    return send_from_directory('templates', 'signup.html')
+
+@app.route('/booking.html')
+def booking():
+    return send_from_directory('templates', 'booking.html')
+
+@app.route('/staff.html')
+def staff():
+    return send_from_directory('templates', 'staff.html')
+
+@app.route('/principal.html')
+def principal():
+    return send_from_directory('templates', 'principal.html')
+
+@app.route('/availability.html')
+def availability():
+    return send_from_directory('templates', 'availability.html')
+
+@app.route('/principal-availability.html')
+def principal_availability():
+    return send_from_directory('templates', 'principal-availability.html')
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Serve static files (CSS, JS, images)"""
+    return send_from_directory('static', filename)
+
+# ==================== HEALTH CHECK ====================
+@app.route('/health')
+def health():
+    return jsonify({'status': 'ok', 'message': 'Server is running'})
+
+# ==================== AUTHENTICATION ROUTES ====================
+@app.route('/signup', methods=['POST'])
+def user_signup():
+    """User signup"""
     try:
         data = request.get_json()
         
-        required_fields = ['role', 'email', 'username', 'password', 'department']
-        if not all(field in data for field in required_fields):
+        if not all([data.get('username'), data.get('password'), data.get('email'), 
+                    data.get('role'), data.get('department'), data.get('full_name')]):
             return jsonify({'message': 'Missing required fields'}), 400
         
-        role = data.get('role')
-        email = data.get('email')
-        username = data.get('username')
-        password = data.get('password')
-        department = data.get('department')
-        full_name = data.get('full_name', '')
-        
-        if role not in ['principal', 'staff']:
-            return jsonify({'message': 'Invalid role'}), 400
-        
-        if len(password) < 8:
-            return jsonify({'message': 'Password must be at least 8 characters'}), 400
-        
         db = get_database()
-        if db.users.find_one({'username': username}):
-            return jsonify({'message': 'Username already exists'}), 409
+        users = db['users']
         
-        if db.users.find_one({'email': email}):
-            return jsonify({'message': 'Email already registered'}), 409
+        # Check if user exists
+        if users.find_one({'username': data['username']}):
+            return jsonify({'message': 'Username already exists'}), 400
         
-        user = {
-            'username': username,
-            'email': email,
-            'password': hash_password(password),
-            'role': role,
-            'department': department,
-            'full_name': full_name,
-            'createdAt': datetime.utcnow()
+        if users.find_one({'email': data['email']}):
+            return jsonify({'message': 'Email already exists'}), 400
+        
+        # Hash password
+        hashed_pwd = bcrypt.hashpw(data['password'].encode(), bcrypt.gensalt())
+        
+        # Create user
+        user_doc = {
+            'username': data['username'],
+            'email': data['email'],
+            'full_name': data['full_name'],
+            'password': hashed_pwd,
+            'role': data['role'],
+            'department': data['department'],
+            'created_at': get_ist_now()
         }
         
-        result = db.users.insert_one(user)
+        users.insert_one(user_doc)
+        return jsonify({'message': 'Account created successfully'}), 201
         
-        return jsonify({
-            'message': 'Account created successfully',
-            'user_id': str(result.inserted_id)
-        }), 201
-    
     except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
+        print(f"❌ Signup error: {e}")
+        return jsonify({'message': str(e)}), 500
 
 @app.route('/login', methods=['POST'])
-def login():
+def user_login():
+    """User login"""
     try:
         data = request.get_json()
-        username = data.get('username', '').strip()
-        password = data.get('password', '')
         
-        if not username or not password:
-            return jsonify({'message': 'Missing username or password'}), 400
+        if not data.get('username') or not data.get('password'):
+            return jsonify({'message': 'Username and password required'}), 400
         
-        user = get_user_by_username(username)
+        db = get_database()
+        users = db['users']
+        user = users.find_one({'username': data['username']})
         
         if not user:
-            return jsonify({'message': 'Invalid username or password'}), 401
+            return jsonify({'message': 'Invalid credentials'}), 401
         
-        if not verify_password(password, user['password']):
-            return jsonify({'message': 'Invalid username or password'}), 401
+        if not bcrypt.checkpw(data['password'].encode(), user['password']):
+            return jsonify({'message': 'Invalid credentials'}), 401
         
-        access_token = create_access_token(
-            identity=username,
-            additional_claims={'role': user['role']}
-        )
+        # Create JWT token
+        token = create_access_token(identity=user['username'], expires_delta=timedelta(days=30))
         
         return jsonify({
-            'token': access_token,
-            'role': user['role'],
+            'token': token,
             'username': user['username'],
             'email': user['email'],
-            'department': user.get('department', ''),
-            'full_name': user.get('full_name', user['username'])
-        }), 200
-    
-    except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
-
-@app.route('/user/<username>', methods=['GET'])
-@jwt_required()
-def get_user_profile(username):
-    try:
-        user = get_user_by_username(username)
-        if not user:
-            return jsonify({'message': 'User not found'}), 404
-        
-        return jsonify({
-            'username': user['username'],
-            'email': user['email'],
-            'department': user.get('department', ''),
-            'full_name': user.get('full_name', user['username']),
+            'full_name': user['full_name'],
+            'department': user['department'],
             'role': user['role']
         }), 200
-    
+        
     except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
-
-@app.route('/change-password', methods=['POST'])
-@jwt_required()
-def change_password():
-    try:
-        current_user = get_jwt_identity()
-        data = request.get_json()
-        
-        old_password = data.get('old', '')
-        new_password = data.get('new', '')
-        
-        if not old_password or not new_password:
-            return jsonify({'message': 'Missing old or new password'}), 400
-        
-        if len(new_password) < 8:
-            return jsonify({'message': 'New password must be at least 8 characters'}), 400
-        
-        user = get_user_by_username(current_user)
-        if not user:
-            return jsonify({'message': 'User not found'}), 404
-        
-        if not verify_password(old_password, user['password']):
-            return jsonify({'message': 'Old password is incorrect'}), 401
-        
-        db = get_database()
-        db.users.update_one(
-            {'username': current_user},
-            {'$set': {'password': hash_password(new_password)}}
-        )
-        
-        return jsonify({'message': 'Password changed successfully'}), 200
-    
-    except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
+        print(f"❌ Login error: {e}")
+        return jsonify({'message': str(e)}), 500
 
 # ==================== BOOKING ROUTES ====================
-
-@app.route('/bookings', methods=['GET'])
-@jwt_required(optional=True)
-def get_bookings():
-    try:
-        db = get_database()
-        
-        date = request.args.get('date')
-        hall = request.args.get('hall')
-        time_slot = request.args.get('time')
-        created_by = request.args.get('createdBy')
-        status = request.args.get('status')
-        start_date = request.args.get('startDate')
-        end_date = request.args.get('endDate')
-        
-        filter_query = {}
-        
-        if date:
-            filter_query['date'] = date
-        
-        if hall:
-            filter_query['hall'] = hall
-        
-        if time_slot:
-            filter_query['time'] = time_slot
-        
-        if created_by:
-            filter_query['createdBy'] = created_by
-        
-        if status:
-            filter_query['status'] = status
-        
-        if start_date or end_date:
-            filter_query['date'] = {}
-            if start_date:
-                filter_query['date']['$gte'] = start_date
-            if end_date:
-                filter_query['date']['$lte'] = end_date
-        
-        bookings = list(db.bookings.find(filter_query).sort('createdAt', -1))
-        
-        for booking in bookings:
-            booking['_id'] = str(booking['_id'])
-        
-        return jsonify({'items': bookings}), 200
-    
-    except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
-
 @app.route('/book', methods=['POST'])
 @jwt_required()
 def create_booking():
+    """Create a new booking"""
     try:
         current_user = get_jwt_identity()
         data = request.get_json()
         
-        required_fields = ['hall', 'dept', 'hod', 'date', 'time', 'seats', 'purpose']
-        if not all(field in data for field in required_fields):
-            return jsonify({'message': 'Missing required fields'}), 400
-        
         db = get_database()
+        bookings = db['bookings']
         
-        if data['time'] != 'Full':
-            conflict = db.bookings.find_one({
-                'hall': data['hall'],
-                'date': data['date'],
-                'time': data['time'],
-                'status': 'Approved'
-            })
-        else:
-            conflict = db.bookings.find_one({
-                'hall': data['hall'],
-                'date': data['date'],
-                'status': 'Approved'
-            })
-        
-        if conflict:
-            return jsonify({'message': 'Hall already booked for this time slot'}), 409
-        
-        booking = {
-            'hall': data['hall'],
-            'department': data['dept'],
-            'hod': data['hod'],
-            'date': data['date'],
-            'time': data['time'],
-            'seats': int(data['seats']),
-            'purpose': data['purpose'],
+        booking_doc = {
+            'hall': data.get('hall'),
+            'date': data.get('date'),
+            'time': data.get('time'),
+            'department': data.get('dept'),
+            'hod': data.get('hod'),
+            'purpose': data.get('purpose'),
+            'seats': data.get('seats'),
             'details': data.get('details', ''),
-            'status': 'Pending',
             'createdBy': current_user,
-            'createdAt': datetime.utcnow()
+            'status': 'Pending',
+            'createdAt': get_ist_now()  # IST TIME
         }
         
-        result = db.bookings.insert_one(booking)
+        result = bookings.insert_one(booking_doc)
+        return jsonify({'message': 'Booking created', 'id': str(result.inserted_id)}), 201
         
-        return jsonify({
-            'message': 'Booking created successfully',
-            'booking_id': str(result.inserted_id)
-        }), 201
-    
     except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
+        print(f"❌ Booking error: {e}")
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/bookings', methods=['GET'])
+@jwt_required()
+def get_bookings():
+    """Get all bookings with filters"""
+    try:
+        db = get_database()
+        bookings = db['bookings']
+        
+        # Get query parameters for filtering
+        hall = request.args.get('hall')
+        date = request.args.get('date')
+        time = request.args.get('time')
+        created_by = request.args.get('createdBy')
+        status = request.args.get('status')
+        
+        query = {}
+        if hall:
+            query['hall'] = hall
+        if date:
+            query['date'] = date
+        if time:
+            query['time'] = time
+        if created_by:
+            query['createdBy'] = created_by
+        if status:
+            query['status'] = status
+        
+        items = list(bookings.find(query))
+        for item in items:
+            item['_id'] = str(item['_id'])
+        
+        return jsonify({'items': items}), 200
+        
+    except Exception as e:
+        print(f"❌ Get bookings error: {e}")
+        return jsonify({'message': str(e)}), 500
 
 @app.route('/approve/<booking_id>', methods=['POST'])
 @jwt_required()
 def approve_booking(booking_id):
+    """Approve a booking"""
     try:
-        current_user = get_jwt_identity()
         db = get_database()
+        bookings = db['bookings']
         
-        user = get_user_by_username(current_user)
-        if user['role'] != 'principal':
-            return jsonify({'message': 'Only Principal can approve bookings'}), 403
-        
-        booking = get_booking_by_id(booking_id)
-        if not booking:
-            return jsonify({'message': 'Booking not found'}), 404
-        
-        db.bookings.update_one(
+        result = bookings.update_one(
             {'_id': ObjectId(booking_id)},
-            {'$set': {
-                'status': 'Approved',
-                'approvedBy': current_user,
-                'approvedAt': datetime.utcnow()
-            }}
+            {'$set': {'status': 'Approved', 'approvedAt': get_ist_now()}}  # IST TIME
         )
         
-        return jsonify({'message': 'Booking approved successfully'}), 200
-    
+        if result.matched_count == 0:
+            return jsonify({'message': 'Booking not found'}), 404
+        
+        return jsonify({'message': 'Booking approved'}), 200
+        
     except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
+        print(f"❌ Approve error: {e}")
+        return jsonify({'message': str(e)}), 500
 
 @app.route('/reject/<booking_id>', methods=['POST'])
 @jwt_required()
 def reject_booking(booking_id):
+    """Reject a booking"""
     try:
-        current_user = get_jwt_identity()
         db = get_database()
+        bookings = db['bookings']
         
-        user = get_user_by_username(current_user)
-        if user['role'] != 'principal':
-            return jsonify({'message': 'Only Principal can reject bookings'}), 403
-        
-        booking = get_booking_by_id(booking_id)
-        if not booking:
-            return jsonify({'message': 'Booking not found'}), 404
-        
-        db.bookings.update_one(
+        result = bookings.update_one(
             {'_id': ObjectId(booking_id)},
-            {'$set': {
-                'status': 'Rejected',
-                'approvedBy': current_user,
-                'approvedAt': datetime.utcnow()
-            }}
+            {'$set': {'status': 'Rejected', 'approvedAt': get_ist_now()}}  # IST TIME
         )
         
-        return jsonify({'message': 'Booking rejected successfully'}), 200
-    
-    except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
-
-# ==================== CALENDAR EXPORT ROUTES ====================
-
-@app.route('/booking/<booking_id>/ics', methods=['GET'])
-@jwt_required(optional=True)
-def download_booking_ics(booking_id):
-    try:
-        booking = get_booking_by_id(booking_id)
-        if not booking:
+        if result.matched_count == 0:
             return jsonify({'message': 'Booking not found'}), 404
         
-        ics_data = generate_ics_for_booking(booking)
+        return jsonify({'message': 'Booking rejected'}), 200
         
-        return send_file(
-            BytesIO(ics_data),
-            mimetype='text/calendar',
-            as_attachment=True,
-            download_name=f"booking_{booking_id}.ics"
-        )
-    
     except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
-
+        print(f"❌ Reject error: {e}")
+        return jsonify({'message': str(e)}), 500
+    
+# ==================== ICS EXPORT ====================
 @app.route('/bookings/export/ics', methods=['POST'])
-@jwt_required(optional=True)
-def export_multiple_ics():
+@jwt_required()
+def export_bookings_ics():
+    """Export bookings to ICS format"""
     try:
         data = request.get_json()
         booking_ids = data.get('booking_ids', [])
         
         if not booking_ids:
-            return jsonify({'message': 'No booking IDs provided'}), 400
+            return jsonify({'message': 'No bookings provided'}), 400
         
         db = get_database()
-        cal = Calendar()
-        cal.add('prodid', '-//CIET Hall Booking//ciet.edu.in//')
-        cal.add('version', '2.0')
+        bookings = db['bookings']
         
+        # Create calendar
+        cal = Calendar()
+        cal.add('prodid', '-//CIET Hall Booking System//EN')
+        cal.add('version', '2.0')
+        cal.add('calscale', 'GREGORIAN')
+        cal.add('method', 'PUBLISH')
+        cal.add('x-wr-calname', 'CIET Hall Bookings')
+        cal.add('x-wr-timezone', 'Asia/Kolkata')
+        
+        event_count = 0
         for booking_id in booking_ids:
-            booking = get_booking_by_id(booking_id)
-            if booking:
-                event = Event()
-                event.add('uid', f"{booking['_id']}@ciet.edu.in")
-                event.add('dtstamp', datetime.utcnow())
+            try:
+                booking = bookings.find_one({'_id': ObjectId(booking_id)})
+                if not booking:
+                    continue
                 
+                # Parse date and time
                 booking_date = datetime.strptime(booking['date'], '%Y-%m-%d')
-                if booking['time'] == 'FN':
+                time_slot = booking['time']
+                
+                if time_slot == 'FN':
                     start_time = booking_date.replace(hour=9, minute=0)
                     end_time = booking_date.replace(hour=13, minute=0)
-                elif booking['time'] == 'AN':
+                elif time_slot == 'AN':
                     start_time = booking_date.replace(hour=14, minute=0)
                     end_time = booking_date.replace(hour=18, minute=0)
                 else:
                     start_time = booking_date.replace(hour=9, minute=0)
                     end_time = booking_date.replace(hour=18, minute=0)
                 
+                event = Event()
+                event.add('summary', f"{booking['hall']} - {booking['purpose']}")
                 event.add('dtstart', start_time)
                 event.add('dtend', end_time)
-                event.add('summary', f"Hall Booking: {booking['hall']}")
-                event.add('description', f"Dept: {booking['department']}\nPurpose: {booking['purpose']}")
-                event.add('location', booking['hall'])
+                event.add('dtstamp', get_ist_now())
+                event.add('location', f"CIET {booking['hall']}")
+                event.add('description', f"Dept: {booking['department']}\nHOD: {booking['hod']}\nSeats: {booking['seats']}")
+                event.add('status', 'CONFIRMED')
+                event.add('uid', str(booking['_id']) + '@ciet.edu')
                 
                 cal.add_component(event)
+                event_count += 1
+                
+            except Exception as e:
+                print(f"Error: {e}")
+                continue
         
-        ics_data = cal.to_ical()
+        if event_count == 0:
+            return jsonify({'message': 'No bookings to export'}), 400
+        
+        ics_content = cal.to_ical()
         
         return send_file(
-            BytesIO(ics_data),
+            BytesIO(ics_content),
             mimetype='text/calendar',
             as_attachment=True,
-            download_name='bookings_export.ics'
+            download_name='ciet_bookings.ics'
         )
-    
+        
     except Exception as e:
-        return jsonify({'message': f'Server error: {str(e)}'}), 500
+        print(f"❌ ICS export error: {e}")
+        return jsonify({'message': str(e)}), 500
 
-# ==================== HEALTH CHECK ====================
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({'status': 'ok', 'message': 'CIET Hall Booking API is running'}), 200
 
 # ==================== ERROR HANDLERS ====================
-
 @app.errorhandler(404)
 def not_found(e):
-    return jsonify({'message': 'Endpoint not found'}), 404
+    """Serve index.html for all routes (SPA support)"""
+    if '.' in request.path:
+        return jsonify({'message': 'File not found'}), 404
+    
+    try:
+        return send_from_directory('templates', 'index.html')
+    except:
+        return jsonify({'message': 'Not found'}), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    return jsonify({'message': 'Internal server error'}), 500
+    return jsonify({'message': 'Internal server error', 'error': str(e)}), 500
 
-# ==================== MAIN ====================
-
+# ==================== RUN APP ====================
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
