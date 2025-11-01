@@ -1,6 +1,5 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -37,12 +36,10 @@
     }
 
     @keyframes float {
-
       0%,
       100% {
         transform: translateY(0)
       }
-
       50% {
         transform: translateY(-10px)
       }
@@ -153,9 +150,11 @@
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between" data-aos="fade-down">
       <a href="principal.html" class="flex items-center gap-3">
         <img src="/static/images/college_logo.png" alt="CIET" class="w-10 h-10" />
-        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">CIET • Booking Reports</span>
+        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 hidden sm:inline">CIET • Booking Reports</span>
       </a>
-      <div class="flex items-center gap-3">
+      
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-3">
         <button id="exportIcsBtn"
           class="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition text-sm font-medium">
           📅 Export ICS
@@ -174,6 +173,34 @@
         </a>
       </div>
 
+      <!-- Mobile Menu Button -->
+      <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4">
+      <div class="space-y-2">
+        <button id="exportIcsBtnMobile"
+          class="w-full px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition text-sm font-medium text-left">
+          📅 Export ICS
+        </button>
+        <button id="printBtnMobile"
+          class="w-full px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm font-medium text-left">
+          🖨️ Print
+        </button>
+        <button id="exportPdfBtnMobile"
+          class="w-full px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition text-sm font-medium text-left">
+          📄 Export PDF
+        </button>
+        <a href="principal.html"
+          class="block w-full px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm text-center">
+          Dashboard
+        </a>
+      </div>
     </div>
   </header>
 
@@ -493,18 +520,6 @@
       window.print();
     });
 
-    // ==================== INITIALIZE ====================
-    console.log('=== Principal Report Page ===');
-
-    // Set default date range
-    const today = new Date();
-    const start = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const end = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    document.getElementById('startDate').value = start.toISOString().split('T')[0];
-    document.getElementById('endDate').value = end.toISOString().split('T')[0];
-
-    loadBookings();
     // ==================== EXPORT ICS ====================
     document.getElementById('exportIcsBtn').addEventListener('click', () => {
       try {
@@ -589,7 +604,42 @@ END:VEVENT
       return ics;
     }
 
+    // ==================== INITIALIZE ====================
+    console.log('=== Principal Report Page ===');
+
+    // Set default date range
+    const today = new Date();
+    const start = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const end = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    document.getElementById('startDate').value = start.toISOString().split('T')[0];
+    document.getElementById('endDate').value = end.toISOString().split('T')[0];
+
+    loadBookings();
+
+    // ==================== MOBILE MENU ====================
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+
+    // Copy event listeners to mobile buttons
+    document.getElementById('exportIcsBtnMobile').addEventListener('click', () => {
+      document.getElementById('exportIcsBtn').click();
+      mobileMenu.classList.add('hidden');
+    });
+
+    document.getElementById('printBtnMobile').addEventListener('click', () => {
+      document.getElementById('printBtn').click();
+      mobileMenu.classList.add('hidden');
+    });
+
+    document.getElementById('exportPdfBtnMobile').addEventListener('click', () => {
+      document.getElementById('exportPdfBtn').click();
+      mobileMenu.classList.add('hidden');
+    });
   </script>
 </body>
-
 </html>
