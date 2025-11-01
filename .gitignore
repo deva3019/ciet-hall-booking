@@ -36,5 +36,5 @@ Thumbs.db
 logs/
 render.yaml
 Procfile
-static/
+#static/
 node_modules/

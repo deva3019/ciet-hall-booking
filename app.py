@@ -12,11 +12,13 @@ from io import BytesIO
 
 load_dotenv()
 
-# ==================== FLASK APP ====================
+import os
+
 app = Flask(__name__, 
-            static_folder='static', 
+            static_folder=os.path.join(os.path.dirname(__file__), 'static'),
             static_url_path='/static',
-            template_folder='templates')
+            template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
+
 
 app.config.from_object(Config)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -83,6 +85,7 @@ def serve_static(filename):
 @app.route('/health')
 def health():
     return jsonify({'status': 'ok', 'message': 'Server is running'})
+
 
 # ==================== AUTHENTICATION ROUTES ====================
 @app.route('/signup', methods=['POST'])
