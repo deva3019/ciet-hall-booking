@@ -21,7 +21,17 @@ app = Flask(__name__,
 
 
 app.config.from_object(Config)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {
+    "origins": [
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "https://ciet-hall-booking.onrender.com",
+        "https://*"
+    ],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"]
+}})
+
 jwt = JWTManager(app)
 
 # ==================== IST TIMEZONE ====================
