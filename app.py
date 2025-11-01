@@ -21,16 +21,18 @@ app = Flask(__name__,
 
 
 app.config.from_object(Config)
-CORS(app, resources={r"/*": {
-    "origins": [
-        "http://localhost:*",
-        "http://127.0.0.1:*",
-        "https://ciet-hall-booking.onrender.com",
-        "https://*"
-    ],
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization"]
-}})
+# ==================== CORS - STRICT ====================
+CORS(app, 
+     resources={r"/*": {
+        "origins": [
+            "*"  # Allow all for now
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": False
+     }})
+
 
 jwt = JWTManager(app)
 
