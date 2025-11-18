@@ -36,12 +36,6 @@
       to { transform: rotate(360deg); }
     }
 
-    @keyframes pulse-dot {
-      0%, 20%, 50%, 80%, 100% { opacity: 1; }
-      40% { opacity: 0.5; }
-      60% { opacity: 0.5; }
-    }
-
     .btn-loading {
       position: relative;
       pointer-events: none;
@@ -139,50 +133,8 @@
       <p class="text-slate-600 dark:text-slate-300 mt-2">Select a hall and submit your booking request</p>
     </div>
 
-    <!-- Hall Cards with Images -->
-    <div class="grid md:grid-cols-3 gap-6">
-      <!-- Auditorium -->
-      <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition"
-           data-aos="zoom-in" data-aos-delay="0">
-        <img src="/static/images/auditorium.png" alt="Auditorium" class="w-full h-48 object-cover" />
-        <div class="p-6">
-          <h2 class="text-xl font-bold">Auditorium</h2>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Large events, ceremonies, and cultural programs</p>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: 500</p>
-          <button data-hall="Auditorium" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 active:scale-[.98] transition">
-            Book Now
-          </button>
-        </div>
-      </div>
-
-      <!-- Seminar Hall -->
-      <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition"
-           data-aos="zoom-in" data-aos-delay="100">
-        <img src="/static/images/seminar.png" alt="Seminar Hall" class="w-full h-48 object-cover" />
-        <div class="p-6">
-          <h2 class="text-xl font-bold">Seminar Hall</h2>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Workshops, talks, seminars, and presentations</p>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: 250</p>
-          <button data-hall="Seminar Hall" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-fuchsia-600 text-white hover:bg-fuchsia-500 active:scale-[.98] transition">
-            Book Now
-          </button>
-        </div>
-      </div>
-
-      <!-- Board Room -->
-      <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition"
-           data-aos="zoom-in" data-aos-delay="200">
-        <img src="/static/images/board.png" alt="Board Room" class="w-full h-48 object-cover" />
-        <div class="p-6">
-          <h2 class="text-xl font-bold">Board Room</h2>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Meetings, reviews, and administrative sessions</p>
-          <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: 60</p>
-          <button data-hall="Board Room" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-sky-600 text-white hover:bg-sky-500 active:scale-[.98] transition">
-            Book Now
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Dynamic Hall Cards Grid -->
+    <div id="hallsGrid" class="grid md:grid-cols-3 gap-6"></div>
   </main>
 
   <!-- Footer -->
@@ -197,7 +149,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
 
   <script>
-    const apiBase = 'https://ciet-hall-booking.onrender.com';
+    const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://127.0.0.1:5000" : "https://ciet-hall-booking.onrender.com";
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
     const userDepartment = localStorage.getItem('department');
@@ -214,12 +167,60 @@
 
     const DEPARTMENTS = ['CSE', 'ECE', 'AIDS', 'MCT', 'CIVIL', 'MECH', 'IT', 'CYBER SECURITY', 'VLSI', 'EEE', 'AIML', 'S&H', 'Placement'];
 
-    document.querySelectorAll('.book-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        openBookingForm(btn.dataset.hall);
-      });
-    });
+    // Load assets/halls dynamically
+    async function loadHalls() {
+      try {
+        const res = await fetch(`${apiBase}/assets`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) throw new Error('Failed to load halls');
+        
+        const data = await res.json();
+        renderHalls(data.items || []);
+      } catch (err) {
+        document.getElementById('hallsGrid').innerHTML = '<div class="col-span-3 text-center py-12 text-red-600">❌ Error loading halls.</div>';
+        console.error(err);
+      }
+    }
+
+    function renderHalls(halls) {
+      const grid = document.getElementById('hallsGrid');
+      
+      if (halls.length === 0) {
+        grid.innerHTML = '<div class="col-span-3 text-center py-12 text-slate-600 dark:text-slate-400">No halls available for booking.</div>';
+        return;
+      }
+
+      const colors = ['indigo', 'fuchsia', 'sky', 'purple', 'emerald', 'orange'];
+      
+      grid.innerHTML = halls.map((hall, index) => {
+        const color = colors[index % colors.length];
+        return `
+          <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition" data-aos="zoom-in" data-aos-delay="${index * 100}">
+            <img src="${hall.image_url || '/static/images/college_logo.png'}" alt="${hall.name}" class="w-full h-48 object-cover" />
+            <div class="p-6">
+              <h2 class="text-xl font-bold">${hall.name}</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">${hall.description || 'No description available'}</p>
+              <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: <span class="font-semibold">${hall.seats}</span></p>
+              <button data-hall="${hall.name}" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-${color}-600 text-white hover:bg-${color}-700 active:scale-[.98] transition font-medium">
+                Book Now
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Attach event listeners after rendering
+      setTimeout(() => {
+        document.querySelectorAll('.book-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openBookingForm(btn.dataset.hall);
+          });
+        });
+      }, 100);
+    }
 
     async function openBookingForm(hall) {
       const deptOptions = DEPARTMENTS.map(d => {
@@ -381,6 +382,9 @@
         });
       }
     }
+
+    // Load halls on page load
+    loadHalls();
   </script>
 </body>
 </html>

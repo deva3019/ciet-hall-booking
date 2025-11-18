@@ -60,7 +60,7 @@
   <!-- Login Card -->
   <main class="grid place-items-center px-4 py-4">
     <section class="w-full max-w-md p-8 rounded-3xl border border-slate-300/60 dark:border-white/10 bg-white/80 dark:bg-white/5 backdrop-blur-xl shadow-2xl"
-             data-aos="zoom-in" data-aos-duration="700">
+              data-aos="zoom-in" data-aos-duration="700">
       <div class="text-center mb-6">
         <h1 class="text-2xl font-bold">Login</h1>
         <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">CIET Hall Booking System</p>
@@ -232,7 +232,9 @@
 
         // Auto-redirect based on role
         setTimeout(() => {
-          if (data.role === 'principal') {
+          if (data.role === 'administrator') {
+            location.href = 'admin.html';
+          } else if (data.role === 'principal') {
             location.href = 'principal.html';
           } else {
             location.href = 'staff.html';

@@ -213,17 +213,9 @@
       <p class="text-slate-600 dark:text-slate-400">Select a hall to view 60-day availability</p>
     </div>
 
-    <!-- Hall Selector Tabs -->
-    <div class="flex gap-3 mb-8 flex-wrap">
-      <button class="hall-tab active px-4 py-2 rounded-lg font-medium text-sm transition-all border" data-hall="Auditorium">
-        🏛️ Auditorium (500)
-      </button>
-      <button class="hall-tab px-4 py-2 rounded-lg font-medium text-sm transition-all border" data-hall="Seminar Hall">
-        🎤 Seminar Hall (250)
-      </button>
-      <button class="hall-tab px-4 py-2 rounded-lg font-medium text-sm transition-all border" data-hall="Board Room">
-        📊 Board Room (60)
-      </button>
+    <!-- Hall Selector Tabs (Dynamic) -->
+    <div id="hallTabs" class="flex gap-3 mb-8 flex-wrap">
+      <!-- Tabs will be dynamically loaded here -->
     </div>
 
     <!-- Legend & Info Bar -->
@@ -346,16 +338,18 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
 
   <script>
-    const apiBase = 'https://ciet-hall-booking.onrender.com';
+    const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://127.0.0.1:5000" : "https://ciet-hall-booking.onrender.com";
     const token = localStorage.getItem('token');
 
     if (typeof AOS !== 'undefined') {
       AOS.init({ once: true, duration: 700, easing: 'ease-out', offset: 60 });
     }
 
-    let currentHall = 'Auditorium';
+    let currentHall = '';
     let currentFilter = 'all';
     let allBookings = [];
+    let allHalls = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -455,6 +449,47 @@
       renderCalendar(month3, 'month3-calendar', 'month3-header');
     }
 
+    async function loadHalls() {
+      try {
+        const res = await fetch(`${apiBase}/assets`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) throw new Error('Failed to load halls');
+        
+        const data = await res.json();
+        allHalls = data.items || [];
+
+        if (allHalls.length === 0) {
+          document.getElementById('hallTabs').innerHTML = '<div class="text-slate-600 dark:text-slate-400">No halls available</div>';
+          return;
+        }
+
+        currentHall = allHalls[0].name;
+
+        const tabsHtml = allHalls.map((hall, index) => `
+          <button class="hall-tab ${index === 0 ? 'active' : ''} px-4 py-2 rounded-lg font-medium text-sm transition-all border" data-hall="${hall.name}">
+            ${hall.name} (${hall.seats})
+          </button>
+        `).join('');
+
+        document.getElementById('hallTabs').innerHTML = tabsHtml;
+
+        document.querySelectorAll('.hall-tab').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.hall-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentHall = btn.dataset.hall;
+            renderAllCalendars();
+          });
+        });
+
+      } catch (err) {
+        console.error('Error loading halls:', err);
+        document.getElementById('hallTabs').innerHTML = '<div class="text-red-600">Error loading halls</div>';
+      }
+    }
+
     async function loadBookings() {
       try {
         const res = await fetch(`${apiBase}/bookings`, {
@@ -520,16 +555,7 @@
       }
     });
 
-    // Event listeners
-    document.querySelectorAll('.hall-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.hall-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentHall = btn.dataset.hall;
-        renderAllCalendars();
-      });
-    });
-
+    // Filter button listeners
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -539,7 +565,13 @@
       });
     });
 
-    loadBookings();
+    // Load halls first, then bookings
+    async function init() {
+      await loadHalls();
+      await loadBookings();
+    }
+
+    init();
   </script>
 </body>
 </html>
