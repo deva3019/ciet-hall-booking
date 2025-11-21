@@ -8,9 +8,7 @@
 
   <!-- Tailwind CDN -->
   <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
-  <script>
-    tailwind.config = { darkMode: 'class' }
-  </script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
 
   <!-- AOS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
@@ -26,9 +24,7 @@
           document.documentElement.classList.remove('dark');
         } else {
           const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (prefersDark) {
-            document.documentElement.classList.add('dark');
-          }
+          if (prefersDark) document.documentElement.classList.add('dark');
         }
       } catch(e) {}
     })();
@@ -39,6 +35,8 @@
     @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
     @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
     html { scroll-behavior: smooth; }
+    .fadein-aos { opacity:0; transition: opacity .9s cubic-bezier(.22,.61,.36,1),transform .7s cubic-bezier(.22,.61,.36,1); transform: translateY(25px);}
+    .fadein-aos.aos-animate { opacity:1; transform: none; }
   </style>
 </head>
 
@@ -105,6 +103,14 @@
     </section>
   </header>
 
+  <!-- EVENTS: Today & Upcoming -->
+  <section class="max-w-5xl mx-auto px-4 py-10" id="events" data-aos="fade-up">
+    <h2 class="text-2xl font-bold mb-6 text-center">Today's Events</h2>
+    <div id="todayEvents" class="grid md:grid-cols-2 gap-5 mb-12"></div>
+    <h2 class="text-2xl font-bold mt-8 mb-6 text-center">Upcoming Events</h2>
+    <div id="upcomingEvents" class="grid md:grid-cols-2 gap-5"></div>
+  </section>
+
   <!-- Features -->
   <main id="features" class="max-w-7xl mx-auto px-6 pb-24">
     <h2 class="text-2xl font-bold" data-aos="fade-up">Features</h2>
@@ -140,7 +146,12 @@
   <footer class="border-t border-slate-200 dark:border-white/10">
     <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
       <p class="text-slate-600 dark:text-slate-400">© CIET • Smart Hall Booking</p>
-      <p class="text-slate-700 dark:text-slate-300">Developed by <span class="font-semibold">DEVA VEERA KUMARAN</span></p>
+<p class="text-slate-700 dark:text-slate-300">
+  Developed by 
+  <a href="https://deva-portfolio-app.netlify.app/" target="_blank" rel="noopener" class="font-semibold underline hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+    DEVA VEERA KUMARAN
+  </a>
+</p>
     </div>
   </footer>
 
@@ -148,7 +159,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
 
   <script>
-    // Initialize AOS
+    // ==================== AOS ====================
     if (typeof AOS !== 'undefined') {
       AOS.init({ once: true, duration: 700, easing: 'ease-out', offset: 60 });
     }
@@ -157,18 +168,13 @@
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.getElementById('themeIcon');
     const htmlElement = document.documentElement;
-
     function updateThemeIcon() {
       const isDark = htmlElement.classList.contains('dark');
       themeIcon.textContent = isDark ? '☀️' : '🌙';
     }
-
     themeToggle.addEventListener('click', function(e) {
       e.preventDefault();
-      
-      // Toggle dark class
       const isDark = htmlElement.classList.contains('dark');
-      
       if (isDark) {
         htmlElement.classList.remove('dark');
         localStorage.setItem('theme', 'light');
@@ -176,18 +182,14 @@
         htmlElement.classList.add('dark');
         localStorage.setItem('theme', 'dark');
       }
-      
       updateThemeIcon();
     });
-
-    // Set initial icon
     updateThemeIcon();
 
     // ==================== CAROUSEL ====================
     const track = document.getElementById('carouselTrack');
     const dots = document.querySelectorAll('#carouselDots button');
     let carouselIndex = 0;
-    
     function updateCarousel() {
       track.style.transform = `translateX(-${(carouselIndex * 100) / 3}%)`;
       dots.forEach((dot, i) => {
@@ -200,24 +202,79 @@
         }
       });
     }
-    
     function nextSlide() {
       carouselIndex = (carouselIndex + 1) % 3;
       updateCarousel();
     }
-    
-    // Auto-advance carousel
     setInterval(nextSlide, 4000);
-    
-    // Dot click handlers
     dots.forEach((dot, i) => {
       dot.addEventListener('click', () => {
         carouselIndex = i;
         updateCarousel();
       });
     });
-
     updateCarousel();
+
+    // ==================== EVENTS LOADER ====================
+    // Hybrid API detection
+    const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "http://127.0.0.1:5000"
+      : "https://ciet-hall-booking.onrender.com";
+
+    function slotToLabel(time) {
+      if (time === 'FN') return '9AM-1PM';
+      if (time === 'AN') return '2PM-6PM';
+      return '9AM-6PM';
+    }
+
+    function eventCard(event) {
+      return `
+        <div class="fadein-aos bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 rounded-xl shadow p-5 hover:scale-[1.03] hover:shadow-lg transition-transform">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="font-semibold text-indigo-700 dark:text-indigo-300 text-lg">${event.hall}</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">${slotToLabel(event.time)}</span>
+          </div>
+          <div class="mb-1 text-sm text-slate-800 dark:text-slate-200">
+            <span class="font-medium">Date:</span> ${event.date}
+          </div>
+          <div class="mb-2 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+            <span class="font-medium">Description:</span> ${event.purpose || event.details || "No description"}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadEvents() {
+      try {
+        const res = await fetch(`${apiBase}/bookings`);
+        const data = await res.json();
+        const events = (data.items || []).filter(e => e.status === 'Approved');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayEvents = events.filter(e => e.date === todayStr);
+        const upcomingEvents = events.filter(e => e.date > todayStr);
+
+        document.getElementById('todayEvents').innerHTML =
+          todayEvents.length
+            ? todayEvents.slice(0, 5).map(eventCard).join('')
+            : '<div class="text-slate-500 dark:text-slate-400">No events today.</div>';
+
+        document.getElementById('upcomingEvents').innerHTML =
+          upcomingEvents.length
+            ? upcomingEvents.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5).map(eventCard).join('')
+            : '<div class="text-slate-500 dark:text-slate-400">No upcoming events.</div>';
+
+        // Simple fade-in animation for cards
+        ['todayEvents', 'upcomingEvents'].forEach(id => {
+          document.querySelectorAll(`#${id} .fadein-aos`).forEach((el, idx) => {
+            setTimeout(() => el.classList.add('aos-animate'), 60 * (idx + 1));
+          });
+        });
+      } catch(err) {
+        document.getElementById('todayEvents').innerHTML = '<div class="text-rose-500">Failed to load events.</div>';
+        document.getElementById('upcomingEvents').innerHTML = '<div class="text-rose-500">Failed to load events.</div>';
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadEvents);
   </script>
 </body>
 </html>
