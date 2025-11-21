@@ -246,7 +246,7 @@
 
     async function loadEvents() {
       try {
-        const res = await fetch(`${apiBase}/bookings`);
+        const res = await fetch(`${apiBase}/public/bookings`);
         const data = await res.json();
         const events = (data.items || []).filter(e => e.status === 'Approved');
         const todayStr = new Date().toISOString().split('T')[0];
