@@ -129,12 +129,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
 
   <script>
-    // HYBRID API BASE - Works for both localhost and Render
-    const apiBase = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-        ? "http://127.0.0.1:5000" 
-        : "https://ciet-hall-booking.onrender.com";
+const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'  // Local development
+  : 'https://ciet-hall-booking.onrender.com';  // Production
 
-    console.log('🔗 API Base:', apiBase);
+console.log('🔗 API Base URL:', apiBase);
 
     // AOS
     if (typeof AOS !== 'undefined') {

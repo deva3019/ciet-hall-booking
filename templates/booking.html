@@ -154,7 +154,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
 
   <script>
-    const apiBase ='http://127.0.0.1:5000'
+const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'  // Local development
+  : 'https://ciet-hall-booking.onrender.com';  // Production
+
+console.log('🔗 API Base URL:', apiBase);
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
     const userDepartment = localStorage.getItem('department');

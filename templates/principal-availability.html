@@ -370,7 +370,13 @@
 
   <script>
     // ==================== CONFIG ====================
-    const apiBase = 'https://ciet-hall-booking.onrender.com';
+    // Automatically detect environment
+const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'  // Local development
+  : 'https://ciet-hall-booking.onrender.com';  // Production
+
+console.log('🔗 API Base URL:', apiBase);
+
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
 
