@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Book Halls • CIET Hall Booking</title>
+  <link rel="icon" href="/static/images/college_logo.png" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <!-- AOS + SweetAlert2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Pre-paint theme -->
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', saved ? saved === 'dark' : prefersDark);
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+    .blob { filter: blur(48px); opacity:.26 }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .btn-loading {
+      position: relative;
+      pointer-events: none;
+    }
+
+    .btn-loading::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      top: 50%;
+      left: 50%;
+      margin-left: -8px;
+      margin-top: -8px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .swal2-actions {
+      display: flex !important;
+      gap: 10px !important;
+      justify-content: center !important;
+      margin-top: 20px !important;
+      position: relative !important;
+      z-index: 1000 !important;
+    }
+
+    .swal2-confirm, .swal2-cancel {
+      padding: 10px 20px !important;
+      font-size: 14px !important;
+      border-radius: 6px !important;
+      display: inline-block !important;
+      cursor: pointer !important;
+      border: none !important;
+      font-weight: 500 !important;
+      min-width: 100px !important;
+      transition: all 0.3s !important;
+    }
+
+    .swal2-confirm {
+      background-color: #4f46e5 !important;
+      color: white !important;
+    }
+
+    .swal2-confirm:hover:not(:disabled) {
+      background-color: #4338ca !important;
+    }
+
+    .swal2-confirm:disabled {
+      opacity: 0.7 !important;
+      cursor: not-allowed !important;
+    }
+
+    .swal2-cancel {
+      background-color: #e5e7eb !important;
+      color: #374151 !important;
+    }
+
+    .swal2-cancel:hover {
+      background-color: #d1d5db !important;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
+  <!-- Background -->
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/40 dark:bg-indigo-500/35 blob" style="animation: float 12s ease-in-out infinite;"></div>
+    <div class="absolute -bottom-24 -right-16 w-[28rem] h-[28rem] rounded-full bg-fuchsia-500/30 dark:bg-fuchsia-500/25 blob" style="animation: float 14s ease-in-out infinite;"></div>
+    <div class="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-sky-500/25 dark:bg-sky-500/20 blob" style="animation: float 16s ease-in-out infinite;"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between" data-aos="fade-down">
+    <a href="index.html" class="flex items-center gap-3">
+      <img src="/static/images/college_logo.png" alt="CIET" class="w-10 h-10" />
+      <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">CIET • Hall Booking</span>
+    </a>
+    <div class="flex items-center gap-3">
+      <a href="availability.html" class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition">
+        Availability
+      </a>
+      <a href="staff.html" class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition">
+        Dashboard
+      </a>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <div class="text-center mb-10" data-aos="fade-up">
+      <h1 class="text-3xl font-bold">Book a Hall</h1>
+      <p class="text-slate-600 dark:text-slate-300 mt-2">Select a hall and submit your booking request</p>
+    </div>
+
+    <!-- Dynamic Hall Cards Grid -->
+    <div id="hallsGrid" class="grid md:grid-cols-3 gap-6"></div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-white/10 mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-slate-600 dark:text-slate-400">© CIET • Smart Hall Booking</p>
+<p class="text-slate-700 dark:text-slate-300">
+  Developed by 
+  <a href="https://deva-portfolio-app.netlify.app/" target="_blank" rel="noopener" class="font-semibold underline hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+    DEVA VEERA KUMARAN
+  </a>
+</p>
+    </div>
+  </footer>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
+
+  <script>
+const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'  // Local development
+  : 'https://ciet-hall-booking.onrender.com';  // Production
+
+console.log('🔗 API Base URL:', apiBase);
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    const userDepartment = localStorage.getItem('department');
+    const userFullName = localStorage.getItem('full_name');
+    
+    // Auth check
+    if (!token) {
+      location.href = 'login.html';
+    }
+    
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ once: true, duration: 700, easing: 'ease-out-cubic', offset: 50 });
+    }
+
+    const DEPARTMENTS = ['CSE', 'ECE', 'AIDS', 'MCT', 'CIVIL', 'MECH', 'IT', 'CYBER SECURITY', 'VLSI', 'EEE', 'AIML', 'MBA', 'S&H', 'Placement'];
+
+    // Load assets/halls dynamically
+    async function loadHalls() {
+      try {
+        const res = await fetch(`${apiBase}/assets`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (!res.ok) throw new Error('Failed to load halls');
+        
+        const data = await res.json();
+        renderHalls(data.items || []);
+      } catch (err) {
+        document.getElementById('hallsGrid').innerHTML = '<div class="col-span-3 text-center py-12 text-red-600">❌ Error loading halls.</div>';
+        console.error(err);
+      }
+    }
+
+    function renderHalls(halls) {
+      const grid = document.getElementById('hallsGrid');
+      
+      if (halls.length === 0) {
+        grid.innerHTML = '<div class="col-span-3 text-center py-12 text-slate-600 dark:text-slate-400">No halls available for booking.</div>';
+        return;
+      }
+
+      const colors = ['indigo', 'fuchsia', 'sky', 'purple', 'emerald', 'orange'];
+      
+      grid.innerHTML = halls.map((hall, index) => {
+        const color = colors[index % colors.length];
+        return `
+          <div class="group rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur overflow-hidden hover:shadow-xl transition" data-aos="zoom-in" data-aos-delay="${index * 100}">
+            <img src="${hall.image_url || '/static/images/college_logo.png'}" alt="${hall.name}" class="w-full h-48 object-cover" />
+            <div class="p-6">
+              <h2 class="text-xl font-bold">${hall.name}</h2>
+              <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">${hall.description || 'No description available'}</p>
+              <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Total Seats: <span class="font-semibold">${hall.seats}</span></p>
+              <button data-hall="${hall.name}" class="book-btn mt-4 w-full px-4 py-2 rounded-lg bg-${color}-600 text-white hover:bg-${color}-700 active:scale-[.98] transition font-medium">
+                Book Now
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Attach event listeners after rendering
+      setTimeout(() => {
+        document.querySelectorAll('.book-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openBookingForm(btn.dataset.hall);
+          });
+        });
+      }, 100);
+    }
+
+    // ==================== UPDATE THIS FUNCTION IN booking.html ====================
+
+    async function openBookingForm(hall) {
+      const deptOptions = DEPARTMENTS.map(d => {
+        const selected = d === userDepartment ? 'selected' : '';
+        return `<option value="${d}" ${selected}>${d}</option>`;
+      }).join('');
+
+      const { value: formValues, isConfirmed } = await Swal.fire({
+        title: `Book ${hall}`,
+        html: `
+          <div style="text-align: left; font-size: 13px;">
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">Department *</label>
+              <select id="swal-dept" class="swal-input-custom">
+                <option value="">Select Department</option>
+                ${deptOptions}
+              </select>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">HOD Name *</label>
+              <input id="swal-hod" class="swal-input-custom" placeholder="Enter HOD name" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 4px;">From Date *</label>
+                <input id="swal-date-from" type="date" class="swal-input-custom" />
+              </div>
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 4px;">To Date *</label>
+                <input id="swal-date-to" type="date" class="swal-input-custom" />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+              <div>
+                <label style="display: block; font-weight: 600; margin-bottom: 4px;">Time *</label>
+                <select id="swal-time" class="swal-input-custom">
+                  <option value="">Select</option>
+                  <option value="FN">9AM-1PM (FN)</option>
+                  <option value="AN">2PM-6PM (AN)</option>
+                  <option value="Full">9AM-6PM (Full Day)</option>
+                </select>
+              </div>
+              <div>
+                 <label style="display: block; font-weight: 600; margin-bottom: 4px;">Seats *</label>
+                 <input id="swal-seats" type="number" min="1" class="swal-input-custom" placeholder="50" />
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">Purpose *</label>
+              <input id="swal-purpose" class="swal-input-custom" placeholder="Reason" />
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <label style="display: block; font-weight: 600; margin-bottom: 4px;">Details (Optional)</label>
+              <textarea id="swal-details" style="padding: 8px; border: 1px solid #ccc; border-radius: 6px; width: 100%; height: 60px; box-sizing: border-box;" placeholder="Requirements"></textarea>
+            </div>
+          </div>
+
+          <style>
+            .swal-input-custom {
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+              width: 100%;
+              box-sizing: border-box;
+            }
+          </style>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        confirmButtonColor: '#4f46e5',
+        didOpen: () => {
+            // Logic: When "From" changes, update "To" min date and default value
+            const fromInput = document.getElementById('swal-date-from');
+            const toInput = document.getElementById('swal-date-to');
+
+            fromInput.addEventListener('change', () => {
+                toInput.min = fromInput.value;
+                if (!toInput.value || toInput.value < fromInput.value) {
+                    toInput.value = fromInput.value;
+                }
+            });
+        },
+        preConfirm: () => {
+          const dept = document.getElementById('swal-dept').value;
+          const hod = document.getElementById('swal-hod').value.trim();
+          const fromDate = document.getElementById('swal-date-from').value;
+          const toDate = document.getElementById('swal-date-to').value;
+          const time = document.getElementById('swal-time').value;
+          const seats = parseInt(document.getElementById('swal-seats').value || '0', 10);
+          const purpose = document.getElementById('swal-purpose').value.trim();
+          const details = document.getElementById('swal-details').value.trim();
+
+          if (!dept || !hod || !fromDate || !toDate || !time || seats <= 0 || !purpose) {
+            Swal.showValidationMessage('Fill all required fields');
+            return false;
+          }
+
+          return { hall, dept, hod, fromDate, toDate, time, seats, purpose, details };
+        }
+      });
+
+      if (!isConfirmed || !formValues) return;
+      await submitBooking(formValues);
+    }
+
+// ==================== UPDATE THIS FUNCTION IN booking.html ====================
+
+    async function submitBooking(formValues) {
+      try {
+        const confirmBtn = Swal.getConfirmButton();
+        const originalText = confirmBtn.textContent;
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add('btn-loading');
+        confirmBtn.textContent = '';
+
+        // NOTE: We removed the GET /bookings conflict check here.
+        // The backend /book endpoint now handles the full range conflict check strictly.
+
+        const res = await fetch(`${apiBase}/book`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          // Send fromDate and toDate
+          body: JSON.stringify(formValues)
+        });
+
+        const bookingData = await res.json();
+
+        if (!res.ok) {
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove('btn-loading');
+          confirmBtn.textContent = originalText;
+          Swal.close(); // Close the form
+          return Swal.fire({
+            icon: 'error',
+            title: 'Booking Failed',
+            text: bookingData.message || 'Slot collision or server error.'
+          });
+        }
+
+        // Success
+        Swal.close();
+        await Swal.fire({
+          icon: 'success',
+          title: 'Booking Allocated! ✅',
+          html: `
+            <p>Your booking for <b>${formValues.hall}</b></p>
+            <p>from <b>${formValues.fromDate}</b> to <b>${formValues.toDate}</b></p>
+            <p>has been submitted successfully.</p>
+            <p style="margin-top: 10px; color: #f59e0b; font-weight: bold;">⏳ Pending Principal approval</p>
+          `,
+          confirmButtonText: 'Go to Dashboard',
+          confirmButtonColor: '#4f46e5'
+        });
+
+        location.href = 'staff.html';
+
+      } catch (error) {
+        console.error(error);
+        const confirmBtn = Swal.getConfirmButton();
+        if(confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('btn-loading');
+            confirmBtn.textContent = 'Submit';
+        }
+        
+        Swal.close();
+        Swal.fire({ 
+          icon: 'error', 
+          title: 'Error', 
+          text: error.message 
+        });
+      }
+    }
+
+    // Load halls on page load
+    loadHalls();
+  </script>
+</body>
+</html>

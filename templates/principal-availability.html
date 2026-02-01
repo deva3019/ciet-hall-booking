@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Booking Reports • CIET Hall Booking</title>
+  <link rel="icon" href="/static/images/college_logo.png" />
+
+  <!-- Tailwind CDN with dark mode -->
+  <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <!-- AOS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
+
+  <!-- jsPDF and html2canvas for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Pre-paint theme -->
+  <script>
+      (function () {
+        try {
+          const saved = localStorage.getItem('theme');
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.classList.toggle('dark', saved ? saved === 'dark' : prefersDark);
+        } catch (e) { }
+      })();
+  </script>
+
+  <style>
+    .blob {
+      filter: blur(48px);
+      opacity: .26
+    }
+
+    @keyframes float {
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+      50% {
+        transform: translateY(-10px)
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .blob {
+        animation: none !important
+      }
+    }
+
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+
+      body {
+        background: white !important;
+        color: black !important;
+      }
+    }
+
+    .pdf-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      color: black;
+    }
+
+    .pdf-table th {
+      background-color: #4f46e5;
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      border: 1px solid #e5e7eb;
+    }
+
+    .pdf-table td {
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .pdf-table tbody tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-approved {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-pending {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-rejected {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+
+    .report-header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-radius: 8px;
+    }
+
+    .report-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+      font-size: 13px;
+    }
+
+    .meta-item {
+      padding: 8px;
+      background: #f3f4f6;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
+  <!-- Background -->
+  <div class="pointer-events-none fixed inset-0 -z-10 no-print">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/40 dark:bg-indigo-500/35 blob"
+      style="animation: float 12s ease-in-out infinite;"></div>
+    <div
+      class="absolute -bottom-24 -right-16 w-[28rem] h-[28rem] rounded-full bg-fuchsia-500/30 dark:bg-fuchsia-500/25 blob"
+      style="animation: float 14s ease-in-out infinite;"></div>
+  </div>
+
+  <!-- Header -->
+  <header
+    class="border-b border-slate-200 dark:border-white/10 bg-white/50 dark:bg-slate-900/50 backdrop-blur no-print sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between" data-aos="fade-down">
+      <a href="principal.html" class="flex items-center gap-3">
+        <img src="/static/images/college_logo.png" alt="CIET" class="w-10 h-10" />
+        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 hidden sm:inline">CIET • Booking Reports</span>
+      </a>
+      
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-3">
+        <button id="exportIcsBtn"
+          class="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition text-sm font-medium">
+          📅 Export ICS
+        </button>
+        <button id="printBtn"
+          class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm font-medium">
+          🖨️ Print
+        </button>
+        <button id="exportPdfBtn"
+          class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition text-sm font-medium">
+          📄 Export PDF
+        </button>
+        <a href="principal.html"
+          class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm">
+          Dashboard
+        </a>
+      </div>
+
+      <!-- Mobile Menu Button -->
+      <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="hidden md:hidden border-t border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 p-4">
+      <div class="space-y-2">
+        <button id="exportIcsBtnMobile"
+          class="w-full px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition text-sm font-medium text-left">
+          📅 Export ICS
+        </button>
+        <button id="printBtnMobile"
+          class="w-full px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm font-medium text-left">
+          🖨️ Print
+        </button>
+        <button id="exportPdfBtnMobile"
+          class="w-full px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition text-sm font-medium text-left">
+          📄 Export PDF
+        </button>
+        <a href="principal.html"
+          class="block w-full px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm text-center">
+          Dashboard
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <!-- Filters -->
+    <section
+      class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur mb-8 no-print"
+      data-aos="fade-up">
+      <h2 class="text-lg font-bold mb-4">Report Filters</h2>
+      <div class="grid md:grid-cols-5 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Start Date</label>
+          <input id="startDate" type="date"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 bg-white dark:bg-slate-900 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">End Date</label>
+          <input id="endDate" type="date"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 bg-white dark:bg-slate-900 text-sm" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Hall</label>
+          <select id="hallFilter"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 bg-white dark:bg-slate-900 text-sm">
+            <option value="">All Halls</option>
+            <option value="Auditorium">Auditorium</option>
+            <option value="Seminar Hall">Seminar Hall</option>
+            <option value="Board Room">Board Room</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Department</label>
+          <select id="deptFilter"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 bg-white dark:bg-slate-900 text-sm">
+            <option value="">All Depts</option>
+            <option value="CSE">Computer Science Engineering</option>
+            <option value="ECE">Electronics & Communication</option>
+            <option value="AIDS">Artificial Intelligence & Data Science</option>
+            <option value="MCT">Mechatronics</option>
+            <option value="CIVIL">Civil Engineering</option>
+            <option value="MECH">Mechanical Engineering</option>
+            <option value="IT">Information Technology</option>
+            <option value="CYBER SECURITY">Cyber Security</option>
+            <option value="VLSI">VLSI Design</option>
+            <option value="EEE">Electrical & Electronics Engineering</option>
+            <option value="AIML">AI & Machine Learning</option>
+            <option value="S&H">Science & Humanities</option>
+            <option value="MBA">MBA</option>
+            <option value="Placement">Placement Cell</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Status</label>
+          <select id="statusFilter"
+            class="w-full px-3 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 bg-white dark:bg-slate-900 text-sm">
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-4 flex gap-3">
+        <button id="applyFilters"
+          class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition text-sm font-medium">Apply</button>
+        <button id="clearFilters"
+          class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm">Clear</button>
+      </div>
+    </section>
+
+    <!-- Statistics Cards -->
+    <div class="grid md:grid-cols-4 gap-6 mb-8" data-aos="fade-up">
+      <div
+        class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur">
+        <p class="text-sm text-slate-600 dark:text-slate-400">Total Bookings</p>
+        <p class="text-3xl font-bold mt-1" id="statTotal">0</p>
+      </div>
+      <div
+        class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur">
+        <p class="text-sm text-slate-600 dark:text-slate-400">Approved</p>
+        <p class="text-3xl font-bold mt-1 text-emerald-600 dark:text-emerald-400" id="statApproved">0</p>
+      </div>
+      <div
+        class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur">
+        <p class="text-sm text-slate-600 dark:text-slate-400">Pending</p>
+        <p class="text-3xl font-bold mt-1 text-amber-600 dark:text-amber-400" id="statPending">0</p>
+      </div>
+      <div
+        class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur">
+        <p class="text-sm text-slate-600 dark:text-slate-400">Rejected</p>
+        <p class="text-3xl font-bold mt-1 text-red-600 dark:text-red-400" id="statRejected">0</p>
+      </div>
+    </div>
+
+    <!-- Export Area -->
+    <div id="exportContent"
+      class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur">
+      <!-- Report Header -->
+      <div class="report-header no-print">
+        <h1 class="text-2xl font-bold">CIET Hall Booking Report</h1>
+      </div>
+
+      <!-- For PDF - Detailed Header -->
+      <div id="pdfHeader"
+        style="display: none; background: #4f46e5; color: white; padding: 20px; text-align: center; margin-bottom: 20px;">
+        <h1 style="font-size: 24px; font-weight: bold; margin: 0;">CIET Hall Booking Management System</h1>
+        <p style="margin: 5px 0; font-size: 14px;">Booking Report</p>
+      </div>
+
+      <!-- Report Metadata -->
+      <div class="report-meta no-print">
+        <div class="meta-item">
+          <strong>Institution:</strong> CIET
+        </div>
+        <div class="meta-item">
+          <strong>Generated:</strong> <span id="reportDate"></span>
+        </div>
+        <div class="meta-item">
+          <strong>Period:</strong> <span id="reportPeriod">All Time</span>
+        </div>
+        <div class="meta-item">
+          <strong>Generated By:</strong> Principal
+        </div>
+      </div>
+
+      <!-- Bookings Table -->
+      <div class="overflow-x-auto mt-6">
+        <table class="pdf-table">
+          <thead>
+            <tr>
+              <th>Booking Date</th>
+              <th>Time Slot</th>
+              <th>Hall</th>
+              <th>Department</th>
+              <th>Purpose</th>
+              <th>Seats</th>
+              <th>Requested By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTableBody">
+            <tr>
+              <td colspan="8" class="text-center py-8 text-slate-500">Loading bookings...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer for PDF -->
+      <div id="pdfFooter"
+        style="display: none; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc; text-align: center; font-size: 12px; color: #666;">
+        <p style="margin: 5px 0;">© CIET • Smart Hall Booking System</p>
+        <p style="margin: 5px 0;">This is an official document. For queries, contact the Principal's office.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-white/10 mt-16 no-print">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-slate-600 dark:text-slate-400">© CIET • Smart Hall Booking</p>
+<p class="text-slate-700 dark:text-slate-300">
+  Developed by 
+  <a href="https://deva-portfolio-app.netlify.app/" target="_blank" rel="noopener" class="font-semibold underline hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+    DEVA VEERA KUMARAN
+  </a>
+</p>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
+
+  <script>
+    // ==================== CONFIG ====================
+    // Automatically detect environment
+const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'  // Local development
+  : 'https://ciet-hall-booking.onrender.com';  // Production
+
+console.log('🔗 API Base URL:', apiBase);
+
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+
+    if (!token || role !== 'principal') {
+      location.href = 'login.html';
+    }
+
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ once: true, duration: 700, easing: 'ease-out', offset: 60 });
+    }
+
+    // ==================== DATA ====================
+    let allBookings = [];
+    let filteredBookings = [];
+
+    // ==================== LOAD BOOKINGS ====================
+    async function loadBookings() {
+      try {
+        console.log('Loading bookings...');
+        const res = await fetch(`${apiBase}/bookings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        allBookings = data.items || [];
+        filteredBookings = [...allBookings];
+        console.log('✅ Loaded', allBookings.length, 'bookings');
+        renderReport();
+      } catch (err) {
+        console.error('❌ Error:', err);
+        document.getElementById('bookingsTableBody').innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-500">Backend not connected.</td></tr>';
+      }
+    }
+    // ==================== HELPER: DATE FORMATTER ====================
+    function formatDateRange(booking) {
+      // 1. Handle new multi-day bookings
+      if (booking.fromDate && booking.toDate) {
+        const start = new Date(booking.fromDate).toLocaleDateString('en-IN');
+        const end = new Date(booking.toDate).toLocaleDateString('en-IN');
+
+        // If start and end are the same day, just show one date
+        if (start === end) return start;
+
+        // Otherwise show range
+        return `${start} ➝ ${end}`;
+      }
+
+      // 2. Fallback for old single-day bookings
+      if (booking.date) {
+        return new Date(booking.date).toLocaleDateString('en-IN');
+      }
+
+      return 'N/A';
+    }
+
+    // ==================== RENDER REPORT ====================
+    function renderReport() {
+      // Update stats
+      document.getElementById('statTotal').textContent = filteredBookings.length;
+      document.getElementById('statApproved').textContent = filteredBookings.filter(b => b.status === 'Approved').length;
+      document.getElementById('statPending').textContent = filteredBookings.filter(b => b.status === 'Pending').length;
+      document.getElementById('statRejected').textContent = filteredBookings.filter(b => b.status === 'Rejected').length;
+
+      // Update report date and period
+      const now = new Date();
+      document.getElementById('reportDate').textContent = now.toLocaleDateString('en-IN', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      // Update period
+        if (filteredBookings.length > 0) {
+        const dates = filteredBookings.map(b => new Date(b.date)).sort((a, b) => a - b);
+        const startDate = dates[0].toLocaleDateString();
+        const endDate = dates[dates.length - 1].toLocaleDateString();
+        document.getElementById('reportPeriod').textContent = `${startDate} to ${endDate}`;
+      }
+
+      // Render table with proper colors
+      const tbody = document.getElementById('bookingsTableBody');
+      if (filteredBookings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-500">No bookings found.</td></tr>';
+      } else {
+        tbody.innerHTML = filteredBookings.map(b => {
+          let badgeClass = 'badge-pending';
+          if (b.status === 'Approved') badgeClass = 'badge-approved';
+          if (b.status === 'Rejected') badgeClass = 'badge-rejected';
+
+          return `
+            <tr>
+              <td style="white-space: nowrap;">${formatDateRange(b)}</td>
+              <td>${b.time === 'FN' ? '9AM-1PM' : b.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</td>
+              <td><strong>${b.hall}</strong></td>
+              <td>${b.department}</td>
+              <td>${b.purpose}</td>
+              <td>${b.seats}</td>
+              <td>${b.createdBy}</td>
+              <td><span class="badge ${badgeClass}">${b.status}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // ==================== APPLY FILTERS ====================
+    document.getElementById('applyFilters').addEventListener('click', () => {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const hall = document.getElementById('hallFilter').value;
+      const dept = document.getElementById('deptFilter').value;
+      const status = document.getElementById('statusFilter').value;
+
+      filteredBookings = allBookings.filter(b => {
+        if (startDate && b.date < startDate) return false;
+        if (endDate && b.date > endDate) return false;
+        if (hall && b.hall !== hall) return false;
+        if (dept && b.department !== dept) return false;
+        if (status && b.status !== status) return false;
+        return true;
+      });
+
+      renderReport();
+    });
+
+    // ==================== CLEAR FILTERS ====================
+    document.getElementById('clearFilters').addEventListener('click', () => {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('hallFilter').value = '';
+      document.getElementById('deptFilter').value = '';
+      document.getElementById('statusFilter').value = '';
+      filteredBookings = [...allBookings];
+      renderReport();
+    });
+
+    // ==================== EXPORT PDF ====================
+    document.getElementById('exportPdfBtn').addEventListener('click', () => {
+      const element = document.getElementById('exportContent');
+      const now = new Date();
+      const filename = `CIET_Booking_Report_${now.toISOString().split('T')[0]}.pdf`;
+
+      // Show PDF-specific elements
+      document.getElementById('pdfHeader').style.display = 'block';
+      document.getElementById('pdfFooter').style.display = 'block';
+      document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+
+      const opt = {
+        margin: 10,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        console.log('✅ PDF exported');
+        // Hide PDF-specific elements
+        document.getElementById('pdfHeader').style.display = 'none';
+        document.getElementById('pdfFooter').style.display = 'none';
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+      }).catch(err => {
+        console.error('❌ Export error:', err);
+        // Hide PDF-specific elements on error too
+        document.getElementById('pdfHeader').style.display = 'none';
+        document.getElementById('pdfFooter').style.display = 'none';
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = '');
+      });
+    });
+
+    // ==================== PRINT ====================
+    document.getElementById('printBtn').addEventListener('click', () => {
+      window.print();
+    });
+
+    // ==================== EXPORT ICS ====================
+    document.getElementById('exportIcsBtn').addEventListener('click', () => {
+      try {
+        // Create ICS content from filtered bookings
+        const icsContent = createIcsContent(filteredBookings);
+
+        // Download
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ciet_bookings_${new Date().toISOString().slice(0, 10)}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert(`✅ Downloaded! ${filteredBookings.length} bookings exported`);
+
+      } catch (err) {
+        console.error('Export error:', err);
+        alert('❌ Export failed');
+      }
+    });
+
+    // Create ICS content
+    // ==================== UPDATED ICS EXPORT LOGIC ====================
+    function createIcsContent(bookings) {
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+      let ics = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//CIET Hall Booking System//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:CIET Hall Bookings
+X-WR-TIMEZONE:Asia/Kolkata
+BEGIN:VTIMEZONE
+TZID:Asia/Kolkata
+BEGIN:STANDARD
+TZOFFSETFROM:+0530
+TZOFFSETTO:+0530
+TZNAME:IST
+DTSTART:19700101T000000
+END:STANDARD
+END:VTIMEZONE
+`;
+
+      bookings.forEach((b, idx) => {
+        // 1. Determine Start and End Dates
+        let startDateObj, endDateObj;
+
+        if (b.fromDate && b.toDate) {
+            startDateObj = new Date(b.fromDate);
+            endDateObj = new Date(b.toDate);
+        } else {
+            // Fallback for legacy data
+            startDateObj = new Date(b.date);
+            endDateObj = new Date(b.date);
+        }
+
+        // 2. Determine Time
+        let startHour = '09', endHour = '13';
+        if (b.time === 'AN') {
+          startHour = '14';
+          endHour = '18';
+        } else if (b.time === 'FULL' || b.time === 'Full') {
+          startHour = '09';
+          endHour = '18';
+        }
+
+        // 3. Format Strings (YYYYMMDD)
+        const formatFunc = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}${m}${d}`;
+        };
+
+        const startStr = formatFunc(startDateObj);
+        const endStr = formatFunc(endDateObj);
+
+        // 4. Construct Datetime strings
+        const dtstart = `${startStr}T${startHour}0000`;
+        const dtend = `${endStr}T${endHour}0000`;
+
+        const uid = `${b._id || idx}@ciet.edu`;
+
+        ics += `BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${timestamp}
+DTSTART;TZID=Asia/Kolkata:${dtstart}
+DTEND;TZID=Asia/Kolkata:${dtend}
+SUMMARY:${b.hall} - ${b.purpose}
+LOCATION:CIET ${b.hall}
+DESCRIPTION:Department: ${b.department}\\nHOD: ${b.hod}\\nSeats: ${b.seats}\\nDetails: ${b.details || 'N/A'}
+STATUS:CONFIRMED
+END:VEVENT
+`;
+      });
+
+      ics += `END:VCALENDAR`;
+      return ics;
+    }
+
+    // ==================== INITIALIZE ====================
+    console.log('=== Principal Report Page ===');
+
+    // Set default date range
+    const today = new Date();
+    const start = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const end = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    document.getElementById('startDate').value = start.toISOString().split('T')[0];
+    document.getElementById('endDate').value = end.toISOString().split('T')[0];
+
+    loadBookings();
+
+    // ==================== MOBILE MENU ====================
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+
+    // Copy event listeners to mobile buttons
+    document.getElementById('exportIcsBtnMobile').addEventListener('click', () => {
+      document.getElementById('exportIcsBtn').click();
+      mobileMenu.classList.add('hidden');
+    });
+
+    document.getElementById('printBtnMobile').addEventListener('click', () => {
+      document.getElementById('printBtn').click();
+      mobileMenu.classList.add('hidden');
+    });
+
+    document.getElementById('exportPdfBtnMobile').addEventListener('click', () => {
+      document.getElementById('exportPdfBtn').click();
+      mobileMenu.classList.add('hidden');
+    });
+  </script>
+</body>
+</html>

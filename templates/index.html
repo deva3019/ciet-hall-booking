@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CIET Hall Booking System</title>
+  <link rel="icon" href="/static/images/college_logo.png" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+  <script>tailwind.config = { darkMode: 'class' }</script>
+
+  <!-- AOS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
+
+  <!-- Pre-paint theme -->
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (saved === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else {
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (prefersDark) document.documentElement.classList.add('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+    .blob { filter: blur(48px); opacity:.26 }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
+    html { scroll-behavior: smooth; }
+    .fadein-aos { opacity:0; transition: opacity .9s cubic-bezier(.22,.61,.36,1),transform .7s cubic-bezier(.22,.61,.36,1); transform: translateY(25px);}
+    .fadein-aos.aos-animate { opacity:1; transform: none; }
+  </style>
+</head>
+
+<body class="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
+  <!-- Background -->
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/40 dark:bg-indigo-500/35 blob" style="animation: float 12s ease-in-out infinite;"></div>
+    <div class="absolute -bottom-24 -right-16 w-[28rem] h-[28rem] rounded-full bg-fuchsia-500/30 dark:bg-fuchsia-500/25 blob" style="animation: float 14s ease-in-out infinite;"></div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between" data-aos="fade-down">
+    <div class="flex items-center gap-3">
+      <img src="/static/images/college_logo.png" alt="CIET" class="w-10 h-10" />
+      <div class="leading-tight">
+        <p class="text-sm text-slate-700 dark:text-slate-200">Coimbatore Institute Of Engineering and Technology</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">CIET</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="themeToggle" aria-label="Toggle theme" type="button"
+              class="px-3 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition">
+        <span id="themeIcon">🌙</span>
+      </button>
+      <a href="login.html" class="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200 transition">
+        Login
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <header class="relative">
+    <section class="max-w-7xl mx-auto px-6 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
+      <div data-aos="fade-right">
+        <p class="text-sm uppercase tracking-widest text-indigo-700 dark:text-indigo-300">Official CIET Utility</p>
+        <h1 class="mt-3 text-4xl md:text-6xl font-extrabold leading-tight">CIET Hall Booking System</h1>
+        <p class="mt-4 text-slate-600 md:text-lg dark:text-slate-200">
+          Secure, role-based booking for Auditorium, Seminar Hall, and Board Room with live availability and Principal approvals.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-4">
+          <a href="#features" class="px-5 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition">Get Started</a>
+          <a href="login.html" class="px-5 py-3 rounded-lg border border-slate-300/60 text-slate-900 hover:bg-slate-100 dark:border-white/20 dark:text-white dark:hover:bg-white/10 transition">Login</a>
+        </div>
+      </div>
+
+      <!-- Carousel -->
+      <div class="relative" data-aos="fade-left">
+        <div class="rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur p-5">
+          <div class="relative overflow-hidden rounded-xl ring-1 ring-slate-300/60 dark:ring-white/10">
+            <div id="carouselTrack" class="flex w-[300%]" style="transition: transform 650ms cubic-bezier(.22,.61,.36,1);">
+              <img src="/static/images/auditorium.png" alt="CIET Auditorium" class="w-1/3 h-64 md:h-80 object-cover" />
+              <img src="/static/images/seminar.png" alt="Seminar Hall" class="w-1/3 h-64 md:h-80 object-cover" />
+              <img src="/static/images/board.png" alt="Board Room" class="w-1/3 h-64 md:h-80 object-cover" />
+            </div>
+            <!-- Dots -->
+            <div id="carouselDots" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+              <button type="button" class="h-2.5 w-2.5 rounded-full bg-slate-900/50 dark:bg-white/50" data-active="true"></button>
+              <button type="button" class="h-2.5 w-2.5 rounded-full bg-slate-900/30 dark:bg-white/30"></button>
+              <button type="button" class="h-2.5 w-2.5 rounded-full bg-slate-900/30 dark:bg-white/30"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </header>
+
+  <!-- EVENTS: Today & Upcoming -->
+  <section class="max-w-5xl mx-auto px-4 py-10" id="events" data-aos="fade-up">
+    <h2 class="text-2xl font-bold mb-6 text-center">Today's Events</h2>
+    <div id="todayEvents" class="grid md:grid-cols-2 gap-5 mb-12"></div>
+    <h2 class="text-2xl font-bold mt-8 mb-6 text-center">Upcoming Events</h2>
+    <div id="upcomingEvents" class="grid md:grid-cols-2 gap-5"></div>
+  </section>
+
+  <!-- Features -->
+  <main id="features" class="max-w-7xl mx-auto px-6 pb-24">
+    <h2 class="text-2xl font-bold" data-aos="fade-up">Features</h2>
+    <p class="text-slate-600 dark:text-slate-300 mt-2" data-aos="fade-up">
+      Built for CIET workflows with modern UI and mobile-first design.
+    </p>
+    <div class="mt-8 grid md:grid-cols-3 gap-6">
+      <div class="p-6 rounded-xl bg-white/50 border border-slate-300/60 dark:bg-white/5 dark:border-white/10" data-aos="zoom-in">
+        <div class="flex items-center gap-3">
+          <span class="h-10 w-10 rounded-lg bg-indigo-600/15 flex items-center justify-center text-2xl">🔒</span>
+          <p class="font-semibold">Role-based Login</p>
+        </div>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Principal and HOD/Staff dashboards with secure access.</p>
+      </div>
+      <div class="p-6 rounded-xl bg-white/50 border border-slate-300/60 dark:bg-white/5 dark:border-white/10" data-aos="zoom-in" data-aos-delay="50">
+        <div class="flex items-center gap-3">
+          <span class="h-10 w-10 rounded-lg bg-fuchsia-600/15 flex items-center justify-center text-2xl">📅</span>
+          <p class="font-semibold">Live Availability</p>
+        </div>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Real-time calendar view with booking details and statuses.</p>
+      </div>
+      <div class="p-6 rounded-xl bg-white/50 border border-slate-300/60 dark:bg-white/5 dark:border-white/10" data-aos="zoom-in" data-aos-delay="100">
+        <div class="flex items-center gap-3">
+          <span class="h-10 w-10 rounded-lg bg-sky-600/15 flex items-center justify-center text-2xl">✅</span>
+          <p class="font-semibold">Approval Workflow</p>
+        </div>
+        <p class="text-sm text-slate-600 dark:text-slate-300 mt-2">Principal can approve or reject requests with instant feedback.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-white/10">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-slate-600 dark:text-slate-400">© CIET • Smart Hall Booking</p>
+<p class="text-slate-700 dark:text-slate-300">
+  Developed by 
+  <a href="https://deva-portfolio-app.netlify.app/" target="_blank" rel="noopener" class="font-semibold underline hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+    DEVA VEERA KUMARAN
+  </a>
+</p>
+    </div>
+  </footer>
+
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
+
+  <script>
+    // ==================== AOS ====================
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ once: true, duration: 700, easing: 'ease-out', offset: 60 });
+    }
+
+    // ==================== THEME TOGGLE (FIXED) ====================
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const htmlElement = document.documentElement;
+    function updateThemeIcon() {
+      const isDark = htmlElement.classList.contains('dark');
+      themeIcon.textContent = isDark ? '☀️' : '🌙';
+    }
+    themeToggle.addEventListener('click', function(e) {
+      e.preventDefault();
+      const isDark = htmlElement.classList.contains('dark');
+      if (isDark) {
+        htmlElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        htmlElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
+      updateThemeIcon();
+    });
+    updateThemeIcon();
+
+    // ==================== CAROUSEL ====================
+    const track = document.getElementById('carouselTrack');
+    const dots = document.querySelectorAll('#carouselDots button');
+    let carouselIndex = 0;
+    function updateCarousel() {
+      track.style.transform = `translateX(-${(carouselIndex * 100) / 3}%)`;
+      dots.forEach((dot, i) => {
+        if (i === carouselIndex) {
+          dot.setAttribute('data-active', 'true');
+          dot.style.opacity = '1';
+        } else {
+          dot.removeAttribute('data-active');
+          dot.style.opacity = '0.3';
+        }
+      });
+    }
+    function nextSlide() {
+      carouselIndex = (carouselIndex + 1) % 3;
+      updateCarousel();
+    }
+    setInterval(nextSlide, 4000);
+    dots.forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        carouselIndex = i;
+        updateCarousel();
+      });
+    });
+    updateCarousel();
+
+    // ==================== EVENTS LOADER ====================
+    // Hybrid API detection
+const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'  // Local development
+  : 'https://ciet-hall-booking.onrender.com';  // Production
+
+console.log('🔗 API Base URL:', apiBase);
+
+    function slotToLabel(time) {
+      if (time === 'FN') return '9AM-1PM';
+      if (time === 'AN') return '2PM-6PM';
+      return '9AM-6PM';
+    }
+
+    function eventCard(event) {
+      return `
+        <div class="fadein-aos bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 rounded-xl shadow p-5 hover:scale-[1.03] hover:shadow-lg transition-transform">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="font-semibold text-indigo-700 dark:text-indigo-300 text-lg">${event.hall}</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">${slotToLabel(event.time)}</span>
+          </div>
+          <div class="mb-1 text-sm text-slate-800 dark:text-slate-200">
+            <span class="font-medium">Date:</span> ${event.date}
+          </div>
+          <div class="mb-2 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
+            <span class="font-medium">Description:</span> ${event.purpose || event.details || "No description"}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadEvents() {
+      try {
+        const res = await fetch(`${apiBase}/public/bookings`);
+        const data = await res.json();
+        const events = (data.items || []).filter(e => e.status === 'Approved');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayEvents = events.filter(e => e.date === todayStr);
+        const upcomingEvents = events.filter(e => e.date > todayStr);
+
+        document.getElementById('todayEvents').innerHTML =
+          todayEvents.length
+            ? todayEvents.slice(0, 5).map(eventCard).join('')
+            : '<div class="text-slate-500 dark:text-slate-400">No events today.</div>';
+
+        document.getElementById('upcomingEvents').innerHTML =
+          upcomingEvents.length
+            ? upcomingEvents.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5).map(eventCard).join('')
+            : '<div class="text-slate-500 dark:text-slate-400">No upcoming events.</div>';
+
+        // Simple fade-in animation for cards
+        ['todayEvents', 'upcomingEvents'].forEach(id => {
+          document.querySelectorAll(`#${id} .fadein-aos`).forEach((el, idx) => {
+            setTimeout(() => el.classList.add('aos-animate'), 60 * (idx + 1));
+          });
+        });
+      } catch(err) {
+        document.getElementById('todayEvents').innerHTML = '<div class="text-rose-500">Failed to load events.</div>';
+        document.getElementById('upcomingEvents').innerHTML = '<div class="text-rose-500">Failed to load events.</div>';
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadEvents);
+  </script>
+</body>
+</html>

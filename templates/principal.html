@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Principal Dashboard • CIET Hall Booking</title>
+  <link rel="icon" href="/static/images/college_logo.png" />
+
+  <script src="https://unpkg.com/tailwindcss-cdn@3.4.1/tailwindcss.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', saved ? saved === 'dark' : prefersDark);
+      } catch(e) {}
+    })();
+  </script>
+
+  <style>
+    .blob { filter: blur(48px); opacity:.26 }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @media (prefers-reduced-motion: reduce) { .blob { animation: none !important } }
+
+    /* Fix SweetAlert2 buttons */
+    .swal2-confirm, .swal2-cancel, .swal2-styled:focus {
+      outline: none !important;
+    }
+
+    .swal2-confirm {
+      background-color: #10b981 !important;
+      color: white !important;
+      font-weight: 600 !important;
+      border: none !important;
+      padding: 12px 32px !important;
+      font-size: 16px !important;
+      border-radius: 8px !important;
+    }
+
+    .swal2-confirm:hover {
+      background-color: #059669 !important;
+    }
+
+    .swal2-cancel {
+      background-color: #e5e7eb !important;
+      color: #374151 !important;
+      font-weight: 600 !important;
+      border: none !important;
+      padding: 12px 32px !important;
+      font-size: 16px !important;
+      border-radius: 8px !important;
+      margin-right: 10px !important;
+    }
+
+    .swal2-cancel:hover {
+      background-color: #d1d5db !important;
+    }
+
+    .swal2-html-container {
+      color: #1f2937 !important;
+      font-size: 15px !important;
+      line-height: 1.6 !important;
+    }
+
+    .swal2-popup {
+      background-color: white !important;
+      border-radius: 16px !important;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .swal2-title {
+      color: #1f2937 !important;
+      font-size: 24px !important;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-white">
+  <div class="pointer-events-none fixed inset-0 -z-10">
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-indigo-500/40 dark:bg-indigo-500/35 blob" style="animation: float 12s ease-in-out infinite;"></div>
+    <div class="absolute -bottom-24 -right-16 w-[28rem] h-[28rem] rounded-full bg-fuchsia-500/30 dark:bg-fuchsia-500/25 blob" style="animation: float 14s ease-in-out infinite;"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="border-b border-slate-200 dark:border-white/10 bg-white/50 dark:bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between" data-aos="fade-down">
+      <div class="flex items-center gap-4">
+        <img src="/static/images/college_logo.png" alt="CIET" class="w-10 h-10" />
+        <div>
+          <h1 class="text-lg font-bold">Principal Dashboard</h1>
+          <p class="text-xs text-slate-600 dark:text-slate-400">
+            Welcome, <span id="principalName" class="font-semibold">Principal</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="principal-availability.html" class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition">
+          Reports
+        </a>
+        <button id="logoutBtn" class="px-4 py-2 rounded-lg border border-red-300/60 dark:border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <!-- Stats Cards -->
+    <div class="grid md:grid-cols-4 gap-6 mb-8">
+      <div class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur" data-aos="fade-up" data-aos-delay="0">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Total Requests</p>
+            <p class="text-3xl font-bold mt-1" id="totalCount">0</p>
+          </div>
+          <div class="h-12 w-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-2xl">
+            📋
+          </div>
+        </div>
+      </div>
+      <div class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur" data-aos="fade-up" data-aos-delay="100">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Pending</p>
+            <p class="text-3xl font-bold mt-1 text-amber-600 dark:text-amber-400" id="pendingCount">0</p>
+          </div>
+          <div class="h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-2xl">
+            ⏳
+          </div>
+        </div>
+      </div>
+      <div class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur" data-aos="fade-up" data-aos-delay="200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Approved</p>
+            <p class="text-3xl font-bold mt-1 text-emerald-600 dark:text-emerald-400" id="approvedCount">0</p>
+          </div>
+          <div class="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-2xl">
+            ✅
+          </div>
+        </div>
+      </div>
+      <div class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur" data-aos="fade-up" data-aos-delay="300">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Rejected</p>
+            <p class="text-3xl font-bold mt-1 text-red-600 dark:text-red-400" id="rejectedCount">0</p>
+          </div>
+          <div class="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-2xl">
+            ❌
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Requests -->
+    <section class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur mb-8" data-aos="fade-up">
+      <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <h2 class="text-xl font-bold">Pending Approval Requests</h2>
+        
+        <!-- Filters -->
+        <div class="flex flex-wrap gap-3">
+          <select id="hallFilter" class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 bg-white dark:bg-slate-900 text-sm">
+            <option value="">All Halls</option>
+            <option value="Auditorium">Auditorium</option>
+            <option value="Seminar Hall">Seminar Hall</option>
+            <option value="Board Room">Board Room</option>
+          </select>
+
+          <select id="deptFilter" class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 bg-white dark:bg-slate-900 text-sm">
+            <option value="">All Departments</option>
+            <option value="CSE">CSE</option>
+            <option value="ECE">ECE</option>
+            <option value="AIDS">AIDS</option>
+            <option value="MCT">MCT</option>
+            <option value="CIVIL">CIVIL</option>
+            <option value="MECH">MECH</option>
+            <option value="IT">IT</option>
+            <option value="CYBER SECURITY">CYBER SECURITY</option>
+            <option value="VLSI">VLSI</option>
+            <option value="EEE">EEE</option>
+            <option value="AIML">AIML</option>
+            <option value="S&H">S&H</option>
+            <option value="Placement">Placement</option>
+          </select>
+
+          <button id="clearFilters" class="px-4 py-2 rounded-lg border border-slate-300/60 dark:border-white/20 hover:bg-slate-100 dark:hover:bg-white/10 transition text-sm">
+            Clear
+          </button>
+        </div>
+      </div>
+      
+      <div id="pendingList" class="space-y-3"></div>
+    </section>
+
+    <!-- History -->
+    <section class="p-6 rounded-2xl border border-slate-300/60 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur" data-aos="fade-up">
+      <h2 class="text-xl font-bold mb-4">Approval History</h2>
+      <div id="historyList" class="space-y-3"></div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 dark:border-white/10 mt-16">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-slate-600 dark:text-slate-400">© CIET • Smart Hall Booking</p>
+<p class="text-slate-700 dark:text-slate-300">
+  Developed by 
+  <a href="https://deva-portfolio-app.netlify.app/" target="_blank" rel="noopener" class="font-semibold underline hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+    DEVA VEERA KUMARAN
+  </a>
+</p>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.min.js"></script>
+
+  <script>
+    // ✅ HYBRID API DETECTION - Works for both localhost and Render
+const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:5000'  // Local development
+  : 'https://ciet-hall-booking.onrender.com';  // Production
+
+console.log('🔗 API Base URL:', apiBase);
+
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const fullName = localStorage.getItem('full_name');
+
+    if (!token || role !== 'principal') {
+      location.href = 'login.html';
+    }
+
+    if (typeof AOS !== 'undefined') {
+      AOS.init({ once: true, duration: 700, easing: 'ease-out', offset: 60 });
+    }
+
+    document.getElementById('principalName').textContent = fullName || 'Principal';
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      localStorage.removeItem('username');
+      localStorage.removeItem('department');
+      localStorage.removeItem('full_name');
+      localStorage.removeItem('email');
+      location.href = 'login.html';
+    });
+
+    function statusBadge(status) {
+      if (status === 'Approved') return 'px-3 py-1 text-xs rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800';
+      if (status === 'Rejected') return 'px-3 py-1 text-xs rounded-full border bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
+      return 'px-3 py-1 text-xs rounded-full border bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800';
+    }
+
+    function formatRequestTime(createdAt) {
+      try {
+        if (!createdAt) return 'N/A';
+        
+        const date = new Date(createdAt);
+        
+        // Format to IST (UTC+5:30)
+        const options = {
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        };
+        
+        const formatter = new Intl.DateTimeFormat('en-IN', options);
+        return formatter.format(date);
+      } catch (e) {
+        console.error('Time error:', e);
+        return 'N/A';
+      }
+    }
+    // ==================== NEW HELPER FUNCTION ====================
+    function formatDateRange(booking) {
+      // 1. Handle new multi-day bookings
+      if (booking.fromDate && booking.toDate) {
+        const start = new Date(booking.fromDate).toLocaleDateString('en-IN');
+        const end = new Date(booking.toDate).toLocaleDateString('en-IN');
+
+        // If start and end are the same day, just show one date
+        if (start === end) return start;
+
+        // Otherwise show range
+        return `${start} ➝ ${end}`;
+      }
+
+      // 2. Fallback for old single-day bookings
+      if (booking.date) {
+        return new Date(booking.date).toLocaleDateString('en-IN');
+      }
+
+      return 'N/A';
+    }
+
+    let allBookings = [];
+    let pendingBookings = [];
+
+    async function loadAll() {
+      try {
+        const res = await fetch(`${apiBase}/bookings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        allBookings = data.items || [];
+        pendingBookings = allBookings.filter(b => b.status === 'Pending');
+
+        renderPending(pendingBookings);
+        renderHistory(allBookings.filter(b => b.status !== 'Pending'));
+        updateStats();
+      } catch (err) {
+        console.error('Error:', err);
+        document.getElementById('pendingList').innerHTML = '<div class="text-center py-12 text-slate-500">Backend not connected.</div>';
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('totalCount').textContent = allBookings.length;
+      document.getElementById('pendingCount').textContent = allBookings.filter(b => b.status === 'Pending').length;
+      document.getElementById('approvedCount').textContent = allBookings.filter(b => b.status === 'Approved').length;
+      document.getElementById('rejectedCount').textContent = allBookings.filter(b => b.status === 'Rejected').length;
+    }
+
+function renderPending(items) {
+      const listDiv = document.getElementById('pendingList');
+      if (items.length === 0) {
+        listDiv.innerHTML = '<div class="text-center py-12 text-slate-500 dark:text-slate-400">No pending requests. All caught up! 🎉</div>';
+      } else {
+        listDiv.innerHTML = items.map(b => `
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/50 hover:shadow-lg transition" data-id="${b._id}">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <span class="font-semibold text-lg">${b.hall}</span>
+                <span class="ml-2 ${statusBadge(b.status)}">${b.status}</span>
+              </div>
+              <div class="text-right text-sm text-slate-600 dark:text-slate-400">
+                <div><strong>Booking:</strong> ${formatDateRange(b)}</div>
+                <div class="font-medium">${b.time === 'FN' ? '9AM-1PM' : b.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</div>
+                <div style="margin-top: 4px; font-size: 11px; color: #888;"><strong>Requested:</strong> ${formatRequestTime(b.createdAt)}</div>
+              </div>
+            </div>
+            <div class="text-sm text-slate-600 dark:text-slate-300 space-y-1 mb-4">
+              <p><span class="font-medium">Department:</span> ${b.department}</p>
+              <p><span class="font-medium">HOD:</span> ${b.hod}</p>
+              <p><span class="font-medium">Purpose:</span> ${b.purpose}</p>
+              <p><span class="font-medium">Seats:</span> ${b.seats}</p>
+              <p><span class="font-medium">Requested by:</span> ${b.createdBy}</p>
+              ${b.details ? `<p><span class="font-medium">Details:</span> ${b.details}</p>` : ''}
+            </div>
+            <div class="flex gap-3">
+              <button class="approve-btn flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition font-medium">
+                ✓ Approve
+              </button>
+              <button class="reject-btn flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500 transition font-medium">
+                ✗ Reject
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+        attachHandlers();
+      }
+    }
+
+function renderHistory(items) {
+      const listDiv = document.getElementById('historyList');
+      if (items.length === 0) {
+        listDiv.innerHTML = '<div class="text-center py-12 text-slate-500 dark:text-slate-400">No approval history yet.</div>';
+      } else {
+        listDiv.innerHTML = items.map(b => `
+          <div class="p-4 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/50">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <span class="font-semibold text-lg">${b.hall}</span>
+                <span class="ml-2 ${statusBadge(b.status)}">${b.status}</span>
+              </div>
+              <div class="text-right text-sm text-slate-600 dark:text-slate-400">
+                <div>${formatDateRange(b)}</div>
+                <div class="font-medium">${b.time === 'FN' ? '9AM-1PM' : b.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</div>
+              </div>
+            </div>
+            <div class="text-sm text-slate-600 dark:text-slate-300 space-y-1">
+              <p><span class="font-medium">Department:</span> ${b.department} • <span class="font-medium">Requester:</span> ${b.createdBy}</p>
+              <p><span class="font-medium">Purpose:</span> ${b.purpose}</p>
+              ${b.approvedAt ? `<p><span class="font-medium">Decision time:</span> ${formatRequestTime(b.approvedAt)}</p>` : ''}
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function attachHandlers() {
+      document.querySelectorAll('.approve-btn').forEach(btn => {
+        btn.addEventListener('click', () => act(btn, 'approve'));
+      });
+      document.querySelectorAll('.reject-btn').forEach(btn => {
+        btn.addEventListener('click', () => act(btn, 'reject'));
+      });
+    }
+
+async function act(btn, action) {
+      const card = btn.closest('[data-id]');
+      const id = card.dataset.id;
+      const booking = allBookings.find(b => b._id === id);
+
+      // UPDATED HTML CONTENT IN SWEETALERT
+      const result = await Swal.fire({
+        icon: 'question',
+        title: `${action === 'approve' ? 'Approve' : 'Reject'} Request?`,
+        html: `
+          <div style="text-align: left; background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Hall:</strong> ${booking.hall}</p>
+
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Date:</strong> ${formatDateRange(booking)}</p>
+
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Time:</strong> ${booking.time === 'FN' ? '9AM-1PM' : booking.time === 'AN' ? '2PM-6PM' : '9AM-6PM'}</p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Department:</strong> ${booking.department}</p>
+            <p style="margin: 6px 0; font-size: 14px;"><strong>Requested by:</strong> ${booking.createdBy} at ${formatRequestTime(booking.createdAt)}</p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: action === 'approve' ? 'Yes, Approve' : 'Yes, Reject',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: action === 'approve' ? '#10b981' : '#ef4444',
+        cancelButtonColor: '#e5e7eb'
+      });
+
+      if (!result.isConfirmed) return;
+
+      // ... (rest of the function remains exactly the same)
+      try {
+        const res = await fetch(`${apiBase}/${action}/${id}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          return Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Try again', confirmButtonColor: '#ef4444' });
+        }
+
+        await Swal.fire({
+          icon: 'success',
+          title: `Request ${action === 'approve' ? 'Approved' : 'Rejected'}!`,
+          text: `Notification sent to ${booking.createdBy}`,
+          timer: 2000,
+          showConfirmButton: false,
+          confirmButtonColor: '#10b981'
+        });
+
+        loadAll();
+      } catch (err) {
+        console.error('Error:', err);
+        Swal.fire({ icon: 'error', title: 'Network Error', text: 'Try again later.', confirmButtonColor: '#ef4444' });
+      }
+    }
+
+    function applyFilters() {
+      const hallFilter = document.getElementById('hallFilter').value;
+      const deptFilter = document.getElementById('deptFilter').value;
+
+      let filtered = pendingBookings;
+
+      if (hallFilter) filtered = filtered.filter(b => b.hall === hallFilter);
+      if (deptFilter) filtered = filtered.filter(b => b.department === deptFilter);
+
+      renderPending(filtered);
+    }
+
+    document.getElementById('hallFilter').addEventListener('change', applyFilters);
+    document.getElementById('deptFilter').addEventListener('change', applyFilters);
+    document.getElementById('clearFilters').addEventListener('click', () => {
+      document.getElementById('hallFilter').value = '';
+      document.getElementById('deptFilter').value = '';
+      renderPending(pendingBookings);
+    });
+
+    loadAll();
+  </script>
+</body>
+</html>
